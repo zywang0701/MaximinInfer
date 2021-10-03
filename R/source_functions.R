@@ -149,6 +149,7 @@ LF<-function(X,y,loading,intercept=TRUE,init.Lasso=NULL,lambda=NULL,mu=NULL,step
 #'
 #' @param Gamma regression covariance matrix, of dimension \eqn{L} x \eqn{L}.
 #' @param delta the ridge penalty level, non-positive.
+#' @param report.reward the reward is computed or not (Default = \code{TRUE})
 #'
 #' @return
 #' \item{weight}{the minimizer \eqn{\gamma}}

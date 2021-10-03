@@ -26,7 +26,9 @@
 #' \item{CI}{Confidence Interval for the linear contrast}
 #' \item{CI.length}{Length of the confidence interval}
 #'
-#' @importFrom stats na.omit
+#' @importFrom stats na.omit coef median qchisq qnorm
+#' @importFrom scalreg scalreg
+#' @importFrom flare slim
 #' @importFrom intervals Intervals interval_union
 #' @importFrom MASS mvrnorm
 #' @import CVXR glmnet
@@ -34,9 +36,9 @@
 #'
 #' @examples
 #' L=2
-#' p=500
-#' n=500
-#' n.target=2000
+#' p=100
+#' n=200
+#' n.target=200
 #' A1gen <- function(rho,p){
 #'   A1=matrix(0,p,p)
 #'   for(i in 1:p){
@@ -65,7 +67,7 @@
 #' loading = rep(0, p)
 #' loading[1:5] = 1
 #' mmList <- mmInfer(X.source, Y.source, idx.source, loading, X.target, cov.target=NULL,
-#'                   covariate.shift=TRUE, split=FALSE, delta=-1)
+#'                   covariate.shift=TRUE, split=FALSE, delta=-1, gen.size=50)
 mmInfer <- function(X.source, Y.source, idx.source, loading, X.target=NULL,
                     cov.target=NULL, covariate.shift=TRUE, split=FALSE,
                     lam.value="CV.min", intercept=TRUE, delta=-1,
