@@ -1,0 +1,14 @@
+Package: MaximinInfer
+Type: Package
+Title: Inference for Maximin Effect in high-dimensional settings
+Version: 0.1.0
+Author: Zhenyu Wang
+Maintainer: Zhenyu Wang <zw2641@columbia.edu>
+Description: Provides functionality for the paper. The function is used to compute 
+    the bias corrected estimator of ridge-penalized maximin effect and the point 
+    estimator of its linear contrast. It also constructs the confidence interval 
+    for the linear contrast.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
