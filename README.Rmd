@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 # MaximinInfer
 
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/MaximinInfer)](https://CRAN.R-project.org/package=MaximinInfer)
 <!-- badges: end -->
 
 The goal of MaximinInfer is to provide functionality for the paper. The function is used to compute the bias corrected estimator of ridge-penalized maximin effect and the point 
