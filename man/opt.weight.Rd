@@ -10,6 +10,8 @@ opt.weight(Gamma, delta, report.reward = TRUE)
 \item{Gamma}{regression covariance matrix, of dimension \eqn{L} x \eqn{L}.}
 
 \item{delta}{the ridge penalty level, non-positive.}
+
+\item{report.reward}{the reward is computed or not (Default = \code{TRUE})}
 }
 \value{
 \item{weight}{the minimizer \eqn{\gamma}}

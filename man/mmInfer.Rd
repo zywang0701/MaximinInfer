@@ -63,9 +63,9 @@ the point estimator of its linear contrast. It also constructs the confidence in
 }
 \examples{
 L=2
-p=500
-n=500
-n.target=2000
+p=100
+n=200
+n.target=200
 A1gen <- function(rho,p){
   A1=matrix(0,p,p)
   for(i in 1:p){
@@ -94,5 +94,5 @@ for(l in 1:L) Y.source[seq((l-1)*n+1, l*n)] = X.source[seq((l-1)*n+1, l*n), ] \%
 loading = rep(0, p)
 loading[1:5] = 1
 mmList <- mmInfer(X.source, Y.source, idx.source, loading, X.target, cov.target=NULL,
-                  covariate.shift=TRUE, split=FALSE, delta=-1)
+                  covariate.shift=TRUE, split=FALSE, delta=-1, gen.size=50)
 }
