@@ -1,29 +1,21 @@
----
-output: github_document
----
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "man/figures/README-",
-  out.width = "100%"
-)
-```
 
 # MaximinInfer
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of MaximinInfer is to provide functionality for the paper. The function is used to compute the bias corrected estimator of ridge-penalized maximin effect and the point 
-estimator of its linear contrast. It also constructs the confidence interval for the linear contrast.
+The goal of MaximinInfer is to provide functionality for the paper. The
+function is used to compute the bias corrected estimator of
+ridge-penalized maximin effect and the point estimator of its linear
+contrast. It also constructs the confidence interval for the linear
+contrast.
 
 ## Installation
 
-You can install the released version of MaximinInfer from [CRAN](https://CRAN.R-project.org) with:
+You can install the released version of MaximinInfer from
+[CRAN](https://CRAN.R-project.org) with:
 
 ``` r
 install.packages("MaximinInfer")
@@ -35,14 +27,13 @@ And the development version from [GitHub](https://github.com/) with:
 # install.packages("devtools")
 devtools::install_github("zywang0701/MaximinInfer")
 ```
+
 ## Example
 
 This is a basic example which shows you how to solve a common problem:
 
-```{r example}
+``` r
 library(MaximinInfer)
-
-set.seed(0)
 # The number of groups
 L = 2
 # dimension
@@ -101,20 +92,30 @@ for(l in 1:L){
 }
 mmList <- mmInfer(X.source, Y.source, idx.source, loading, X.target, cov.target=NULL,
                   covariate.shift=TRUE, split=FALSE, delta=-1, gen.size=10)
+#> [1] "delta path starts from 2.0267 which exceeds our maximum limit 2"
+#> [1] "The picked delta is 2"
+#> [1] "Reward Ratio is 0.9921"
+#> [1] "Minimum Eigenvalue plus delta = 4.4991"
 ```
 
 Weights for groups
-```{r}
+
+``` r
 mmList$weights
+#> [1] 0.4896628 0.5103372
 ```
 
 Point estimator for the linear contrast
-```{r}
+
+``` r
 mmList$point.est
+#> [1] 0.3498103
 ```
 
 Confidence Interval for point estimator
-```{r}
-mmList$CI
-```
 
+``` r
+mmList$CI
+#>           [,1]      [,2]
+#> [1,] 0.1891654 0.4989892
+```

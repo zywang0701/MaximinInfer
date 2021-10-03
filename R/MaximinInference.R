@@ -28,6 +28,7 @@
 #'
 #' @importFrom stats na.omit
 #' @importFrom intervals Intervals interval_union
+#' @importFrom MASS mvrnorm
 #' @import CVXR glmnet
 #' @export
 #'
@@ -79,7 +80,7 @@ mmInfer <- function(X.source, Y.source, idx.source, loading, X.target=NULL,
   if(split) s1 <- mm.s1.split(X.source, Y.source, idx.source, X.target, loading, NULL,
                               TRUE, TRUE, lam.value, intercept)
   if(!split) s1 <- mm.s1.nosplit(X.source, Y.source, idx.source, X.target, loading, cov.target,
-                                 covariate.shift, FALSE, lam.value, intercept)
+                                 covariate.shift, lam.value, intercept)
 
   s2 <- mm.s2(s1$Gamma.prop, s1$Coef.est, s1$Point.vec, delta)
   s3 <- mm.s3(s1$gen.mu, s1$gen.Cov, s1$gen.dim, gen.size, threshold, alpha)
@@ -87,7 +88,7 @@ mmInfer <- function(X.source, Y.source, idx.source, loading, X.target=NULL,
 
   returnList <- list("mm.est"=s2$mm.est,
                      "weights"=s2$weight.prop,
-                     "point.est"=s2$point.est,
+                     "point.est"=s2$point,
                      "CI"=s4$CI.union,
                      "CI.length"=s4$CI.length
                      )

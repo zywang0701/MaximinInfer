@@ -3,6 +3,7 @@
 export(mmInfer)
 import(CVXR)
 import(glmnet)
+importFrom(MASS,mvrnorm)
 importFrom(intervals,Intervals)
 importFrom(intervals,interval_union)
 importFrom(stats,na.omit)
