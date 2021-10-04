@@ -57,7 +57,9 @@ A1gen <- function(rho,p){
   }
   return(A1)
 }
+### the source covariance matrix
 cov.source = A1gen(0.6,p)
+### the target covariance matrix
 cov.target = cov.source
 for(i in 1:p) cov.target[i, i] = 1.5
 for(i in 1:5){
