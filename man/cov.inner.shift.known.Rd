@@ -3,7 +3,7 @@
 \name{cov.inner.shift.known}
 \alias{cov.inner.shift.known}
 \title{Estimate the covariance between the pi(l1,k1) entry and pi(l2,k2) entry
-when the covariance for the targeted distribution is known}
+when the covariance for the target distribution is known}
 \usage{
 cov.inner.shift.known(
   Var.vec,
@@ -44,5 +44,5 @@ covariance between the pi(l1, k1) entry and pi(l2, k2) entry
 }
 \description{
 Estimate the covariance between the pi(l1,k1) entry and pi(l2,k2) entry
-when the covariance for the targeted distribution is known
+when the covariance for the target distribution is known
 }
