@@ -4,15 +4,15 @@
 #' @param Y.source Outcome vector for source data, of length \eqn{n.source}
 #' @param idx.source Indicator vector of groups for source data, of length \eqn{n.source}
 #' @param loading Loading, of length \eqn{p}
-#' @param X.target Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = \code{NULL})
-#' @param cov.target Covariance matrix for target data, of dimension \eqn{p} x \eqn{p}. If set as \code{NULL}, `cov.target` is unknown. (default = \code{NULL})
-#' @param covariate.shift Covariate shifts or not between source and target data (default = \code{TRUE})
+#' @param X.target Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)
+#' @param cov.target Covariance matrix for target data, of dimension \eqn{p} x \eqn{p}. If set as `NULL`, `cov.target` is unknown. (default = `NULL`)
+#' @param covariate.shift Covariate shifts or not between source and target data (default = `TRUE``)
 #' @param lam.value The method to be used to obtain each group's intial estimator
-#' @param intercept Should intercept be fitted for the initial estimator (default = \code{TRUE})
-#' @param intercept.loading Should intercept be included for the \code{loading} (default = \code{FALSE})
+#' @param intercept Should intercept be fitted for the initial estimator (default = `TRUE`)
+#' @param intercept.loading Should intercept be included for the loading (default = `FALSE`)
 #'
 #' @return
-#' \code{Maximin} returns an object of class "Maximin". The function \code{infer} is used to do further inference.\\
+#' `Maximin` returns an object of class "Maximin". The function `infer` is used to do further inference.\\
 #' An object of class "Maximin" is a list containing the following components.
 #' \item{Gamma.prop}{The proposed debiased Weight matrix}
 #' \item{Coef.est}{The initial estimators for each group}
@@ -27,51 +27,6 @@
 #' @importFrom flare slim
 #' @importFrom SIHR LF
 #' @import CVXR glmnet
-#'
-#' @examples
-#' \donttest{
-#' ## number of groups
-#' L=2
-#' ## dimension
-#' p=500
-#' ## sample size for each group of source data
-#' ns.source = c(500, 400)
-#' ## sample size for target data
-#' n.target=1000
-#'
-#' A1gen <- function(rho,p){
-#'   A1=matrix(0,p,p)
-#'   for(i in 1:p){
-#'     for(j in 1:p){
-#'       A1[i,j]<-rho^(abs(i-j))
-#'     }
-#'   }
-#'   return(A1)
-#' }
-#' ## mean vector
-#' mean.source = rep(0, p)
-#' mean.target = rep(0, p)
-#' ## covariate shifts
-#' cov.source = A1gen(0.6, p)
-#' cov.target = diag(p)
-#' ## true coefficients
-#' Bs = matrix(0, p, L)
-#' Bs[1:10,1] = seq(1:10)/40
-#' Bs[1:10,2] = -seq(1:10)/40
-#' ## Data
-#' X.source = MASS::mvrnorm(sum(ns.source), mu=mean.source, Sigma=cov.source)
-#' X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
-#' idx.source = rep(1:L, times=ns.source)
-#' Y.source = rep(0, sum(ns.source))
-#' for(l in 1:L){
-#'   idx.l = which(idx.source==l)
-#'   Y.source[idx.l] = X.source[idx.l, ] %*% Bs[,l] + rnorm(ns.source[l])
-#' }
-#' loading = rep(0, p)
-#' loading[1:5] = 1
-#' mm <- Maximin(X.source, Y.source, idx.source, loading, X.target, covariate.shift = TRUE)
-#' mmInfer <- infer(mm, gen.size=100, delta=0)
-#' }
 Maximin <- function(X.source, Y.source, idx.source, loading, X.target=NULL, cov.target=NULL,
                     covariate.shift=TRUE, lam.value=c("CV","CV.min","scalreg","slim"),
                     intercept=TRUE, intercept.loading=FALSE){
