@@ -39,10 +39,12 @@ devtools::install_github("zywang0701/MaximinInfer")
 ## Example
 
 This is a basic example which shows you how to solve a common problem:
+```{r package, message=FALSE}
+library(MaximinInfer)
+```
+
 
 ```{r example}
-library(MaximinInfer)
-
 set.seed(0)
 # The number of groups
 L = 2
@@ -62,6 +64,7 @@ A1gen <- function(rho,p){
   }
   return(A1)
 }
+# covariate shifts between source and target
 cov.source = A1gen(0.6,p)
 cov.target = cov.source
 for(i in 1:p) cov.target[i, i] = 1.5
@@ -91,7 +94,6 @@ Bs[500, 2] = 1
 # loading
 loading = rep(0, p)
 loading[498:500] = 1
-
 X.source = MASS::mvrnorm(sum(ns.source), mu=mean.source, Sigma=cov.source)
 X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
 idx.source = rep(1:L, times=ns.source)
@@ -100,22 +102,29 @@ for(l in 1:L){
   idx.l = which(idx.source==l)
   Y.source[idx.l] = X.source[idx.l, ] %*% Bs[,l] + rnorm(ns.source[l])
 }
-mmList <- mmInfer(X.source, Y.source, idx.source, loading, X.target, cov.target=NULL,
-                  covariate.shift=TRUE, split=FALSE, delta=-1, gen.size=10)
+
+mm <- Maximin(X.source, Y.source, idx.source, loading, X.target, covariate.shift = TRUE)
+mmInfer <- infer(mm)
 ```
+
+Data-dependent ridge penalty
+```{r}
+mmInfer$delta
+```
+
 
 Weights for groups
 ```{r}
-mmList$weights
+mmInfer$weight
 ```
 
 Point estimator for the linear contrast
 ```{r}
-mmList$point.est
+mmInfer$point
 ```
 
 Confidence Interval for point estimator
 ```{r}
-mmList$CI
+mmInfer$CI
 ```
 

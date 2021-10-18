@@ -2,7 +2,7 @@
 % Please edit documentation in R/source_functions.R
 \name{Gamma.shift}
 \alias{Gamma.shift}
-\title{Bias correction for initial estimator of Gamma target}
+\title{Bias correction for initial estimator of Gamma when covariate shifts}
 \usage{
 Gamma.shift(plug.in, X.l, X.k, omega.l, omega.k, Y.l, Y.k, Pred.l, Pred.k)
 }
@@ -31,5 +31,5 @@ Gamma.shift(plug.in, X.l, X.k, omega.l, omega.k, Y.l, Y.k, Pred.l, Pred.k)
 \item{proj.kl}{The projection direction of index (k, l)}
 }
 \description{
-Bias correction for initial estimator of Gamma target
+Bias correction for initial estimator of Gamma when covariate shifts
 }

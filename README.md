@@ -37,7 +37,9 @@ This is a basic example which shows you how to solve a common problem:
 
 ``` r
 library(MaximinInfer)
+```
 
+``` r
 set.seed(0)
 # The number of groups
 L = 2
@@ -57,6 +59,8 @@ A1gen <- function(rho,p){
   }
   return(A1)
 }
+
+# covariate shifts between source and target
 ### the source covariance matrix
 cov.source = A1gen(0.6,p)
 ### the target covariance matrix
@@ -88,7 +92,6 @@ Bs[500, 2] = 1
 # loading
 loading = rep(0, p)
 loading[498:500] = 1
-
 X.source = MASS::mvrnorm(sum(ns.source), mu=mean.source, Sigma=cov.source)
 X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
 idx.source = rep(1:L, times=ns.source)
@@ -97,33 +100,38 @@ for(l in 1:L){
   idx.l = which(idx.source==l)
   Y.source[idx.l] = X.source[idx.l, ] %*% Bs[,l] + rnorm(ns.source[l])
 }
-mmList <- mmInfer(X.source, Y.source, idx.source, loading, X.target, cov.target=NULL,
-                  covariate.shift=TRUE, split=FALSE, delta=-1, gen.size=10)
-#> Warning in decide_delta(Gamma.prop, step_delta = 0.1): The picked delta is over
-#> our maximum limit 2. Early Stopping at iteration 2
-#> [1] "The picked delta is 1.9823"
-#> [1] "Reward Ratio is 1"
-#> [1] "Minimum Eigenvalue plus delta = 4.29"
+
+mm <- Maximin(X.source, Y.source, idx.source, loading, X.target, covariate.shift = TRUE)
+mmInfer <- infer(mm)
+#> Warning in decide_delta(object$Gamma.prop, step_delta = 0.1): The picked delta
+#> is over our maximum limit 2. Early Stopping at iteration 2
+```
+
+Data-dependent ridge penalty
+
+``` r
+mmInfer$delta
+#> [1] 1.946456
 ```
 
 Weights for groups
 
 ``` r
-mmList$weights
-#> [1] 0.499974 0.500026
+mmInfer$weight
+#> [1] 0.4973313 0.5026687
 ```
 
 Point estimator for the linear contrast
 
 ``` r
-mmList$point.est
-#> [1] 0.2729406
+mmInfer$point
+#> [1] 0.2434691
 ```
 
 Confidence Interval for point estimator
 
 ``` r
-mmList$CI
-#>            [,1]      [,2]
-#> [1,] 0.05245401 0.4612412
+mmInfer$CI
+#>           lower    upper
+#> [1,] 0.01450979 0.480033
 ```
