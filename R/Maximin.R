@@ -1,8 +1,6 @@
 #' Class Maximin
-#'
-#' @param X.source Design matrix for source data, of dimension \eqn{n.source} x \eqn{p}
-#' @param Y.source Outcome vector for source data, of length \eqn{n.source}
-#' @param idx.source Indicator vector of groups for source data, of length \eqn{n.source}
+#' @param Xlist list of design matrix for source data, of length \eqn{L}.
+#' @param Ylist list of outcome vector for source data, of length \eqn{L}
 #' @param loading Loading, of length \eqn{p}
 #' @param X.target Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)
 #' @param cov.target Covariance matrix for target data, of dimension \eqn{p} x \eqn{p}. If set as `NULL`, `cov.target` is unknown. (default = `NULL`)
@@ -27,18 +25,36 @@
 #' @importFrom flare slim
 #' @importFrom SIHR LF
 #' @import CVXR glmnet
-Maximin <- function(X.source, Y.source, idx.source, loading, X.target=NULL, cov.target=NULL,
+Maximin <- function(Xlist, Ylist, X.target=NULL, loading, cov.target=NULL,
                     covariate.shift=TRUE, lam.value=c("CV","CV.min","scalreg","slim"),
                     intercept=TRUE, intercept.loading=FALSE){
+
   if(!intercept) intercept.loading=FALSE
   lam.value = match.arg(lam.value)
+
+  ############################################
+  ########### Transfer Source Data ###########
+  ############################################
+  if((is.list(Xlist)==FALSE)||(is.list(Ylist)==FALSE)) stop("Error: check the type of Xlist and Ylist, they must be list")
+  if(length(Xlist)!=length(Ylist)) stop("Error: check the length of Xlist and Ylist")
+  L = length(Xlist)
+  n.x.vec = rep(0, L)
+  n.y.vec = rep(0, L)
+  p.vec = rep(0, L)
+  for(l in 1:L){
+    n.x.vec[l] = dim(Xlist[[l]])[1]
+    p.vec[l] = dim(Xlist[[l]])[2]
+    n.y.vec[l] = length(Ylist[[l]])
+    if(n.x.vec[l]!=n.y.vec[l]) stop(paste("Error: X and Y to the group",l,"has different number of samples"))
+  }
+  if(!all(p.vec==p.vec[1])) stop("Error: check the dimension p of each X, they must be the same")
+  X.source = do.call(rbind, Xlist)
+  Y.source = do.call(c, Ylist)
+  idx.source = rep(1:L, times=n.y.vec)
 
   ##################################
   ########### Check Input ##########
   ##################################
-  if((dim(X.source)[1]!=length(Y.source))||(dim(X.source)[1]!=length(idx.source))){
-    stop("Error: check dimensions of Source Data")
-  }
   if(dim(X.source)[2]!=length(loading)){
     stop("Error: check length of loading")
   }

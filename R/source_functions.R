@@ -331,15 +331,6 @@ proj.direction<-function(Xc,loading,maxiter=6,resol=1.25){
   return(direction)
 }
 
-#'
-#'
-#' @param
-#' @param
-#' @param
-#' @param
-#'
-#' @return
-#' \item{delta}{}
 decide_delta <- function(Gamma, step_delta=0.1, MAX_iter=100, verbose=FALSE){
   ## Purpose: Decide ridge penalty data-dependently
   ## Returns: The data-dependent ridge penalty

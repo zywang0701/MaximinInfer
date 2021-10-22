@@ -5,11 +5,10 @@
 \title{Class Maximin}
 \usage{
 Maximin(
-  X.source,
-  Y.source,
-  idx.source,
-  loading,
+  Xlist,
+  Ylist,
   X.target = NULL,
+  loading,
   cov.target = NULL,
   covariate.shift = TRUE,
   lam.value = c("CV", "CV.min", "scalreg", "slim"),
@@ -18,15 +17,13 @@ Maximin(
 )
 }
 \arguments{
-\item{X.source}{Design matrix for source data, of dimension \eqn{n.source} x \eqn{p}}
+\item{Xlist}{list of design matrix for source data, of length \eqn{L}.}
 
-\item{Y.source}{Outcome vector for source data, of length \eqn{n.source}}
-
-\item{idx.source}{Indicator vector of groups for source data, of length \eqn{n.source}}
-
-\item{loading}{Loading, of length \eqn{p}}
+\item{Ylist}{list of outcome vector for source data, of length \eqn{L}}
 
 \item{X.target}{Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)}
+
+\item{loading}{Loading, of length \eqn{p}}
 
 \item{cov.target}{Covariance matrix for target data, of dimension \eqn{p} x \eqn{p}. If set as `NULL`, `cov.target` is unknown. (default = `NULL`)}
 

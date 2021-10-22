@@ -40,11 +40,10 @@ infer <- function(object, ...){
 #' L=2
 #' ## dimension
 #' p=500
-#' ## sample size for each group of source data
-#' ns.source = c(500, 400)
-#' ## sample size for target data
-#' n.target=1000
 #'
+#' ## mean vector for source
+#' mean.source = rep(0, p)
+#' ## covariance matrix for source
 #' A1gen <- function(rho,p){
 #'   A1=matrix(0,p,p)
 #'   for(i in 1:p){
@@ -54,29 +53,41 @@ infer <- function(object, ...){
 #'   }
 #'   return(A1)
 #' }
-#' ## mean vector
-#' mean.source = rep(0, p)
-#' mean.target = rep(0, p)
-#' ## covariate shifts
 #' cov.source = A1gen(0.6, p)
-#' cov.target = diag(p)
-#' ## true coefficients
-#' Bs = matrix(0, p, L)
-#' Bs[1:10,1] = seq(1:10)/40
-#' Bs[1:10,2] = -seq(1:10)/40
-#' ## Data
-#' X.source = MASS::mvrnorm(sum(ns.source), mu=mean.source, Sigma=cov.source)
-#' X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
-#' idx.source = rep(1:L, times=ns.source)
-#' Y.source = rep(0, sum(ns.source))
-#' for(l in 1:L){
-#'   idx.l = which(idx.source==l)
-#'   Y.source[idx.l] = X.source[idx.l, ] %*% Bs[,l] + rnorm(ns.source[l])
+#'
+#' ## 1st group's source data
+#' n1 = 500
+#' X1 = MASS::mvrnorm(n1, mu=mean.source, Sigma=cov.source)
+#' b1 = rep(0, p)
+#' b1[1:10] = seq(1:10)/40 # true coef for 1st group
+#' Y1 = X1%*%b1 + rnorm(n1)
+#'
+#' ## 2nd group's source data
+#' n2 = 400
+#' X2 = MASS::mvrnorm(n2, mu=mean.source, Sigma=cov.source)
+#' b2 = rep(0, p)
+#' b2[1:10] = -seq(1:10)/40 # true coef for 2nd group
+#' Y2 = X2%*%b2 + rnorm(n2)
+#'
+#' ## Target Data, covariate shift
+#' n.target = 500
+#' mean.target = rep(0, p)
+#' cov.target = cov.source
+#' for(i in 1:p) cov.target[i, i] = cov.target[i, i] + 0.1
+#' for(i in 1:5){
+#'   for(j in 1:5){
+#'     if(i!=j) cov.target[i, j] = 0.9
+#'   }
 #' }
+#' X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
+#'
+#' ## loading
 #' loading = rep(0, p)
 #' loading[1:5] = 1
-#' mm <- Maximin(X.source, Y.source, idx.source, loading, X.target, covariate.shift = TRUE)
-#' mmInfer <- infer(mm, gen.size=100, delta=0)
+#'
+#' ## call
+#' mm <- Maximin(list(X1, X2), list(Y1, Y2), X.target, loading, covariate.shift = TRUE)
+#' mmInfer <- infer(mm)
 #' }
 infer.Maximin <- function(object, gen.size=500, delta=-1, threshold=2, alpha=0.01,...){
   if(delta<0) delta = decide_delta(object$Gamma.prop, step_delta=0.1)

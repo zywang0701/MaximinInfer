@@ -41,17 +41,17 @@ library(MaximinInfer)
 
 ``` r
 set.seed(0)
-# The number of groups
-L = 2
-# dimension
-p = 500
-# sample sizes for each group's source data
-ns.source = c(500, 400)
-# sample size for target data
-n.target = 2000
-# covariance matrix
+## dimension
+p=500
+
+###### Source Data ######
+## number of groups
+L=2
+## mean vector for source
+mean.source = rep(0, p)
+## covariance matrix for source
 A1gen <- function(rho,p){
-  A1=matrix(0,p,p)
+A1=matrix(0,p,p)
   for(i in 1:p){
     for(j in 1:p){
       A1[i,j]<-rho^(abs(i-j))
@@ -59,79 +59,71 @@ A1gen <- function(rho,p){
   }
   return(A1)
 }
+cov.source = A1gen(0.6, p)
 
-# covariate shifts between source and target
-### the source covariance matrix
-cov.source = A1gen(0.6,p)
-### the target covariance matrix
+## 1st group's source data
+n1 = 500
+X1 = MASS::mvrnorm(n1, mu=mean.source, Sigma=cov.source)
+b1 = rep(0, p)
+b1[1:10] = seq(1:10)/40 # true coef for 1st group
+Y1 = X1%*%b1 + rnorm(n1)
+
+## 2nd group's source data
+n2 = 400
+X2 = MASS::mvrnorm(n2, mu=mean.source, Sigma=cov.source)
+b2 = rep(0, p)
+b2[1:10] = -seq(1:10)/40 # true coef for 2nd group
+Y2 = X2%*%b2 + rnorm(n2)
+
+###### Target Data ######
+## covariate shift
+n.target = 500
+mean.target = rep(0, p)
 cov.target = cov.source
-for(i in 1:p) cov.target[i, i] = 1.5
+for(i in 1:p) cov.target[i, i] = cov.target[i, i] + 0.1
 for(i in 1:5){
   for(j in 1:5){
     if(i!=j) cov.target[i, j] = 0.9
   }
 }
-for(i in 499:500){
-  for(j in 499:500){
-    if(i!=j) cov.target[i, j] = 0.9
-  }
-}
-# generate mean for source and target data
-mean.source = rep(0, p)
-mean.target = rep(0, p)
-# coefs
-Bs = matrix(0, p, L)
-Bs[1:10, 1] = seq(1:10)/40
-Bs[22:23,1] = 1
-Bs[498,1] = 0.5
-Bs[499,1] = -0.5
-Bs[500,1] = -0.5
-Bs[1:10, 2] = Bs[1:10, 1]
-Bs[22:23, 2] = 1
-Bs[500, 2] = 1
-# loading
-loading = rep(0, p)
-loading[498:500] = 1
-X.source = MASS::mvrnorm(sum(ns.source), mu=mean.source, Sigma=cov.source)
 X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
-idx.source = rep(1:L, times=ns.source)
-Y.source = rep(0, sum(ns.source))
-for(l in 1:L){
-  idx.l = which(idx.source==l)
-  Y.source[idx.l] = X.source[idx.l, ] %*% Bs[,l] + rnorm(ns.source[l])
-}
 
-mm <- Maximin(X.source, Y.source, idx.source, loading, X.target, covariate.shift = TRUE)
+## loading
+loading = rep(0, p)
+loading[1:5] = 1
+
+## call
+mm <- Maximin(list(X1, X2), list(Y1, Y2), X.target, loading, covariate.shift = TRUE)
 mmInfer <- infer(mm)
-#> Warning in decide_delta(object$Gamma.prop, step_delta = 0.1): The picked delta
-#> is over our maximum limit 2. Early Stopping at iteration 2
+#> Warning in decide_delta(object$Gamma.prop, step_delta = 0.1): Fail to find a
+#> suitable delta, the estimator may be not stable enough.
 ```
 
 Data-dependent ridge penalty
 
 ``` r
 mmInfer$delta
-#> [1] 1.946456
+#> [1] 0.001883843
 ```
 
 Weights for groups
 
 ``` r
 mmInfer$weight
-#> [1] 0.4973313 0.5026687
+#> [1] 0.5136854 0.4863146
 ```
 
 Point estimator for the linear contrast
 
 ``` r
 mmInfer$point
-#> [1] 0.2434691
+#> [1] -0.05622201
 ```
 
 Confidence Interval for point estimator
 
 ``` r
 mmInfer$CI
-#>           lower    upper
-#> [1,] 0.01450979 0.480033
+#>           lower      upper
+#> [1,] -0.2104918 0.09401328
 ```
