@@ -7,44 +7,50 @@
 Maximin(
   Xlist,
   Ylist,
-  X.target = NULL,
   loading,
+  X.target = NULL,
   cov.target = NULL,
   covariate.shift = TRUE,
-  lam.value = c("CV", "CV.min", "scalreg", "slim"),
+  lam.value = c("CV", "CV.min"),
   intercept = TRUE,
   intercept.loading = FALSE
 )
 }
 \arguments{
-\item{Xlist}{list of design matrix for source data, of length \eqn{L}.}
+\item{Xlist}{list of design matrix for source data, of length \eqn{L}}
 
 \item{Ylist}{list of outcome vector for source data, of length \eqn{L}}
 
-\item{X.target}{Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)}
-
 \item{loading}{Loading, of length \eqn{p}}
 
-\item{cov.target}{Covariance matrix for target data, of dimension \eqn{p} x \eqn{p}. If set as `NULL`, `cov.target` is unknown. (default = `NULL`)}
+\item{X.target}{Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)}
 
-\item{covariate.shift}{Covariate shifts or not between source and target data (default = `TRUE``)}
+\item{cov.target}{Covariance matrix for target data, of dimension \eqn{p} x \eqn{p} (default = `NULL`)}
 
-\item{lam.value}{The method to be used to obtain each group's intial estimator}
+\item{covariate.shift}{Covariate shifts or not between source and target data (default = `TRUE`)}
+
+\item{lam.value}{The method to be used to obtain Lasso estimator of high-dimensional regression vector for each group}
 
 \item{intercept}{Should intercept be fitted for the initial estimator (default = `TRUE`)}
 
 \item{intercept.loading}{Should intercept be included for the loading (default = `FALSE`)}
 }
 \value{
-`Maximin` returns an object of class "Maximin". The function `infer` is used to do further inference.\\
+`Maximin` returns an object of class "Maximin". The function `infer` is used to do further inference.
 An object of class "Maximin" is a list containing the following components.
-\item{Gamma.prop}{The proposed debiased Weight matrix}
-\item{Coef.est}{The initial estimators for each group}
-\item{Point.vec}{The point estimator for each group}
+\item{Gamma.prop}{The proposed debiased regression covariance matrix}
+\item{Coef.est}{matrix, of dimension \eqn{p(+1)} x \eqn{L} where each column corresponds to the Lasso estimator of the high-dimensional regression vector for a given group}
+\item{Point.vec}{vector, of length \eqn{L} with the l-th entry as the debiased estimator of the linear combination of the l-th high-dimensional regression vector}
 \item{L}{The number of groups}
-\item{gen.mu}{The mean vector for sampling method}
-\item{gen.Cov}{The variance matrix for sampling method}
+\item{gen.mu}{The mean vector for sampling the regression covariance matrix}
+\item{gen.Cov}{The variance matrix for sampling the regression covariance matrix}
 }
 \description{
-Class Maximin
+`Maximin` returns the class "Maximin", which provides materials for later inference method.
+}
+\details{
+The algorithm implemented scenarios with or without covariate shift. If `cov.target` is specified,
+the `X.target` will be ignored; if not, while `X.target` is specified, `cov.target` will be estimated
+by `X.target`. If both are not specified, the algorithm will automatically set `covariate.shift` as
+`FALSE`.
 }
