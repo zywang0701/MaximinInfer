@@ -2,7 +2,7 @@
 % Please edit documentation in R/Methods.R
 \name{decide_delta}
 \alias{decide_delta}
-\title{decide delta}
+\title{decide delta data-dependently}
 \usage{
 decide_delta(object, step_delta = 0.1, MAX_iter = 100, verbose = FALSE)
 }
@@ -20,6 +20,26 @@ decide_delta(object, step_delta = 0.1, MAX_iter = 100, verbose = FALSE)
 \item{reward.ratio}{The ratio of penalized reward over non-penalized reward}
 }
 \description{
-`decide_delta` will tell if the estimator is stable or not without ridge penalty
+\code{decide_delta} will tell if the estimator is stable or not without ridge penalty
 at first. If instable, it picks a ridge penalty data-dependently.
+}
+\examples{
+\donttest{
+## heterogenous data and covariates shift
+X1 = sample_data$X1
+X2 = sample_data$X2
+Y1 = sample_data$Y1
+Y2 = sample_data$Y2
+X.target = sample_data$X.target
+
+## loading
+loading = rep(0, 100) # dimension p=100
+loading[98:100] = 1
+
+## call
+mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
+out <- decide_delta(mm)
+out$delta
+out$reward.ratio
+}
 }

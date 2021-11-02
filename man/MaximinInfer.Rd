@@ -2,7 +2,7 @@
 % Please edit documentation in R/Methods.R
 \name{MaximinInfer}
 \alias{MaximinInfer}
-\title{Maximin Inference}
+\title{The Wrapper function for Maximin inference}
 \usage{
 MaximinInfer(
   Xlist,
@@ -14,9 +14,9 @@ MaximinInfer(
   lam.value = c("CV", "CV.min"),
   intercept = TRUE,
   intercept.loading = FALSE,
-  gen.size = 500,
   delta = 0,
-  threshold = c(0, 1, 2),
+  gen.size = 500,
+  threshold = 0,
   alpha = 0.05,
   alpha.thres = 0.01
 )
@@ -40,9 +40,9 @@ MaximinInfer(
 
 \item{intercept.loading}{Should intercept be included for the loading (default = `FALSE`)}
 
-\item{gen.size}{The generating sample size (Default = 500)}
-
 \item{delta}{The ridge penalty (Default = 0)}
+
+\item{gen.size}{The generating sample size (Default = 500)}
 
 \item{threshold}{Should generated samples be filtered or not?
 If 0, use normal threshold to filter;
@@ -60,7 +60,7 @@ if 2, do not filter. (Default = 0)}
 \item{CI}{Confidence interval for the linear combination}
 }
 \description{
-`MaximinInfer` is a wrapper for class `Maximin` and the method `infer`.
+\code{MaximinInfer} is a wrapper for class \code{Maximin} and the method \code{infer}.
 }
 \details{
 The algorithm implemented scenarios with or without covariate shift. If `cov.target` is specified,
@@ -70,57 +70,18 @@ by `X.target`. If both are not specified, the algorithm will automatically set `
 }
 \examples{
 \donttest{
-## number of groups
-L=2
-## dimension
-p=500
-
-## mean vector for source
-mean.source = rep(0, p)
-## covariance matrix for source
-A1gen <- function(rho,p){
-  A1=matrix(0,p,p)
-  for(i in 1:p){
-    for(j in 1:p){
-      A1[i,j]<-rho^(abs(i-j))
-    }
-  }
-  return(A1)
-}
-cov.source = A1gen(0.6, p)
-
-## 1st group's source data
-n1 = 500
-X1 = MASS::mvrnorm(n1, mu=mean.source, Sigma=cov.source)
-b1 = rep(0, p)
-b1[1:10] = seq(1:10)/40 # true coef for 1st group
-Y1 = X1\%*\%b1 + rnorm(n1)
-
-## 2nd group's source data
-n2 = 400
-X2 = MASS::mvrnorm(n2, mu=mean.source, Sigma=cov.source)
-b2 = rep(0, p)
-b2[1:10] = -seq(1:10)/40 # true coef for 2nd group
-Y2 = X2\%*\%b2 + rnorm(n2)
-
-## Target Data, covariate shift
-n.target = 500
-mean.target = rep(0, p)
-cov.target = cov.source
-for(i in 1:p) cov.target[i, i] = cov.target[i, i] + 0.1
-for(i in 1:5){
-  for(j in 1:5){
-    if(i!=j) cov.target[i, j] = 0.9
-  }
-}
-X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
+## heterogenous data and covariates shift
+X1 = sample_data$X1
+X2 = sample_data$X2
+Y1 = sample_data$Y1
+Y2 = sample_data$Y2
+X.target = sample_data$X.target
 
 ## loading
-loading = rep(0, p)
-loading[1:5] = 1
+loading = rep(0, 100) # dimension p=100
+loading[98:100] = 1
 
 ## call
-out <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-out$CI
+mmInfer <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
 }
 }

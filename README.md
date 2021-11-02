@@ -39,19 +39,22 @@ This is a basic example which shows you how to solve a common problem:
 library(MaximinInfer)
 ```
 
+The data is heterogeneous and covariates shift between source and target
+data
+
 ``` r
 set.seed(0)
-## dimension
-p=500
 
-###### Source Data ######
 ## number of groups
 L=2
+## dimension
+p=100
+
 ## mean vector for source
 mean.source = rep(0, p)
 ## covariance matrix for source
 A1gen <- function(rho,p){
-A1=matrix(0,p,p)
+  A1=matrix(0,p,p)
   for(i in 1:p){
     for(j in 1:p){
       A1[i,j]<-rho^(abs(i-j))
@@ -62,62 +65,67 @@ A1=matrix(0,p,p)
 cov.source = A1gen(0.6, p)
 
 ## 1st group's source data
-n1 = 500
+n1 = 100
 X1 = MASS::mvrnorm(n1, mu=mean.source, Sigma=cov.source)
+# true coef for 1st group
 b1 = rep(0, p)
-b1[1:10] = seq(1:10)/40 # true coef for 1st group
+b1[1:5] = seq(1,5)/20
+b1[98:100] = c(0.5, -0.5, -0.5)
 Y1 = X1%*%b1 + rnorm(n1)
 
 ## 2nd group's source data
-n2 = 400
+n2 = 100
 X2 = MASS::mvrnorm(n2, mu=mean.source, Sigma=cov.source)
+# true coef for 2nd group
 b2 = rep(0, p)
-b2[1:10] = -seq(1:10)/40 # true coef for 2nd group
+b2[6:10] = seq(1,5)/20
+b2[98:100] = 0.5*c(0.5, -0.5, -0.5)
 Y2 = X2%*%b2 + rnorm(n2)
 
-###### Target Data ######
-## covariate shift
-n.target = 500
+## Target Data, covariate shift
+n.target = 100
 mean.target = rep(0, p)
 cov.target = cov.source
-for(i in 1:p) cov.target[i, i] = cov.target[i, i] + 0.1
+for(i in 1:p) cov.target[i, i] = 1.5
 for(i in 1:5){
   for(j in 1:5){
     if(i!=j) cov.target[i, j] = 0.9
   }
 }
+for(i in 99:100){
+  for(j in 99:100){
+    if(i!=j) cov.target[i, j] = 0.9
+  }
+}
 X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
-
-## loading
-loading = rep(0, p)
-loading[1:5] = 1
-
-## call
-mm <- Maximin(list(X1, X2), list(Y1, Y2), X.target, loading, covariate.shift = TRUE)
-mmInfer <- infer(mm)
-#> Warning in decide_delta(object$Gamma.prop, step_delta = 0.1): Fail to find a
-#> suitable delta, the estimator may be not stable enough.
 ```
 
-Data-dependent ridge penalty
-
 ``` r
-mmInfer$delta
-#> [1] 0.001883843
+set.seed(0)
+## loading
+loading = rep(0, 100) # dimension p=100
+loading[98:100] = 1
+
+## call - use wrapper function
+# mmInfer <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
+
+## call - separate steps
+mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
+mmInfer <- infer(mm)
 ```
 
 Weights for groups
 
 ``` r
 mmInfer$weight
-#> [1] 0.5136854 0.4863146
+#> [1] 0.4729686 0.5270314
 ```
 
 Point estimator for the linear contrast
 
 ``` r
 mmInfer$point
-#> [1] -0.05622201
+#> [1] -0.3883289
 ```
 
 Confidence Interval for point estimator
@@ -125,5 +133,28 @@ Confidence Interval for point estimator
 ``` r
 mmInfer$CI
 #>           lower      upper
-#> [1,] -0.2104918 0.09401328
+#> [1,] -0.9004034 0.09923036
+```
+
+The default ridge penalty used is 0, if you want to make sure the
+estimator is more stable, we recommend adding a data-dependent penalty.
+The function below will help you tell whether zero penalty suffices to
+yield a stable estimator, if not, it will return a suggested penalty
+level.
+
+``` r
+out <- decide_delta(mm)
+out$delta
+#> [1] 1.2
+out$reward.ratio
+#> [1] 0.9503952
+```
+
+We can measure instability for specific ridge penalty
+
+``` r
+out2 <- measure_instability(mm, delta=out$delta)
+# if measure < 0.5, it's stable enough; 
+out2$measure
+#> [1] 0.04840878
 ```

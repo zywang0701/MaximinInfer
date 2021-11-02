@@ -5,7 +5,7 @@
 #' @param delta The ridge penalty (Default = 0)
 #' @param gen.size The generating sample size (Default = 500)
 #' @param threshold Should generated samples be filtered or not?
-#' If 0, use normal threshold to filter;
+#' if 0, use normal threshold to filter;
 #' if 1, use chi-square threshold to filter;
 #' if 2, do not filter (Default = 0)
 #' @param alpha confidence value to construct confidence interval (Default = 0.05)
@@ -25,60 +25,22 @@
 #'
 #' @examples
 #' \donttest{
-#' ## number of groups
-#' L=2
-#' ## dimension
-#' p=500
-#'
-#' ## mean vector for source
-#' mean.source = rep(0, p)
-#' ## covariance matrix for source
-#' A1gen <- function(rho,p){
-#'   A1=matrix(0,p,p)
-#'   for(i in 1:p){
-#'     for(j in 1:p){
-#'       A1[i,j]<-rho^(abs(i-j))
-#'     }
-#'   }
-#'   return(A1)
-#' }
-#' cov.source = A1gen(0.6, p)
-#'
-#' ## 1st group's source data
-#' n1 = 500
-#' X1 = MASS::mvrnorm(n1, mu=mean.source, Sigma=cov.source)
-#' b1 = rep(0, p)
-#' b1[1:10] = seq(1:10)/40 # true coef for 1st group
-#' Y1 = X1%*%b1 + rnorm(n1)
-#'
-#' ## 2nd group's source data
-#' n2 = 400
-#' X2 = MASS::mvrnorm(n2, mu=mean.source, Sigma=cov.source)
-#' b2 = rep(0, p)
-#' b2[1:10] = -seq(1:10)/40 # true coef for 2nd group
-#' Y2 = X2%*%b2 + rnorm(n2)
-#'
-#' ## Target Data, covariate shift
-#' n.target = 500
-#' mean.target = rep(0, p)
-#' cov.target = cov.source
-#' for(i in 1:p) cov.target[i, i] = cov.target[i, i] + 0.1
-#' for(i in 1:5){
-#'   for(j in 1:5){
-#'     if(i!=j) cov.target[i, j] = 0.9
-#'   }
-#' }
-#' X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
+#' ## heterogenous data and covariates shift
+#' X1 = sample_data$X1
+#' X2 = sample_data$X2
+#' Y1 = sample_data$Y1
+#' Y2 = sample_data$Y2
+#' X.target = sample_data$X.target
 #'
 #' ## loading
-#' loading = rep(0, p)
-#' loading[1:5] = 1
+#' loading = rep(0, 100) # dimension p=100
+#' loading[98:100] = 1
 #'
 #' ## call
 #' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
 #' mmInfer <- infer(mm)
 #' }
-infer <- function(object, delta=0, gen.size=500, threshold=c(0,1,2), alpha=0.05, alpha.thres=0.01){
+infer <- function(object, delta=0, gen.size=500, threshold=0, alpha=0.05, alpha.thres=0.01){
   ##############################
   ####### Maximin Effects ######
   ##############################
@@ -94,7 +56,6 @@ infer <- function(object, delta=0, gen.size=500, threshold=c(0,1,2), alpha=0.05,
   ##### Generate Samples ######
   #############################
   gen.dim = object$L*(object$L+1)/2
-  threshold = match.arg(threshold)
   if(threshold==0){
     thres = qnorm(1-alpha.thres/(gen.dim*2))
     gen.samples = matrix(0, nrow=gen.size, ncol=gen.dim)
@@ -168,7 +129,7 @@ infer <- function(object, delta=0, gen.size=500, threshold=c(0,1,2), alpha=0.05,
   return(out)
 }
 
-#' Wrapper function for Maximin inference
+#' The Wrapper function for Maximin inference
 #' @description \code{MaximinInfer} is a wrapper for class \code{Maximin} and the method \code{infer}.
 #'
 #' @details
@@ -204,78 +165,38 @@ infer <- function(object, delta=0, gen.size=500, threshold=c(0,1,2), alpha=0.05,
 #'
 #' @examples
 #' \donttest{
-#' ## number of groups
-#' L=2
-#' ## dimension
-#' p=500
-#'
-#' ## mean vector for source
-#' mean.source = rep(0, p)
-#' ## covariance matrix for source
-#' A1gen <- function(rho,p){
-#'   A1=matrix(0,p,p)
-#'   for(i in 1:p){
-#'     for(j in 1:p){
-#'       A1[i,j]<-rho^(abs(i-j))
-#'     }
-#'   }
-#'   return(A1)
-#' }
-#' cov.source = A1gen(0.6, p)
-#'
-#' ## 1st group's source data
-#' n1 = 500
-#' X1 = MASS::mvrnorm(n1, mu=mean.source, Sigma=cov.source)
-#' b1 = rep(0, p)
-#' b1[1:10] = seq(1:10)/40 # true coef for 1st group
-#' Y1 = X1%*%b1 + rnorm(n1)
-#'
-#' ## 2nd group's source data
-#' n2 = 400
-#' X2 = MASS::mvrnorm(n2, mu=mean.source, Sigma=cov.source)
-#' b2 = rep(0, p)
-#' b2[1:10] = -seq(1:10)/40 # true coef for 2nd group
-#' Y2 = X2%*%b2 + rnorm(n2)
-#'
-#' ## Target Data, covariate shift
-#' n.target = 500
-#' mean.target = rep(0, p)
-#' cov.target = cov.source
-#' for(i in 1:p) cov.target[i, i] = cov.target[i, i] + 0.1
-#' for(i in 1:5){
-#'   for(j in 1:5){
-#'     if(i!=j) cov.target[i, j] = 0.9
-#'   }
-#' }
-#' X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
+#' ## heterogenous data and covariates shift
+#' X1 = sample_data$X1
+#' X2 = sample_data$X2
+#' Y1 = sample_data$Y1
+#' Y2 = sample_data$Y2
+#' X.target = sample_data$X.target
 #'
 #' ## loading
-#' loading = rep(0, p)
-#' loading[1:5] = 1
+#' loading = rep(0, 100) # dimension p=100
+#' loading[98:100] = 1
 #'
 #' ## call
-#' out <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-#' out$CI
+#' mmInfer <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
 #' }
 MaximinInfer <- function(Xlist, Ylist, loading, X.target=NULL, cov.target=NULL,
                          covariate.shift=TRUE, lam.value=c("CV","CV.min"),
-                         intercept=TRUE, intercept.loading=FALSE, gen.size=500,
-                         delta=0, threshold=c(0,1,2), alpha=0.05, alpha.thres=0.01){
+                         intercept=TRUE, intercept.loading=FALSE, delta=0,
+                         gen.size=500, threshold=0, alpha=0.05, alpha.thres=0.01){
   lam.value = match.arg(lam.value)
-  threshold = match.arg(threshold)
   mm <- Maximin(Xlist, Ylist, loading, X.target, cov.target, covariate.shift, lam.value, intercept, intercept.loading)
-  out <- infer(mm, gen.size, delta, threshold, alpha, alpha.thres)
+  out <- infer(mm, delta, gen.size, threshold, alpha, alpha.thres)
   return(out)
 }
 
-#' instability measurement
-#'
+#' measurement of instability
 #' @description compute the instability measurement given a specific ridge penalty
+#'
 #' @param object Object of class inheriting from "Maximin"
 #' @param delta The ridge penalty (Default = 0)
 #' @param gen.size The generating sample size (Default = 500)
 #' @param threshold Should generated samples be filtered or not?
-#' If 0, use normal threshold to filter;
+#' if 0, use normal threshold to filter;
 #' if 1, use chi-square threshold to filter;
 #' if 2, do not filter. (Default = 0)
 #' @param alpha.thres confidence value to select generated samples (Default = 0.01)
@@ -283,7 +204,25 @@ MaximinInfer <- function(Xlist, Ylist, loading, X.target=NULL, cov.target=NULL,
 #' @return
 #' \item{measure}{The measurement of instability}
 #' @export
-measure_instability <- function(object, delta=0, gen.size=500, threshold=c(0,1,2), alpha.thres=0.01){
+#' @examples
+#' \donttest{
+#' ## heterogenous data and covariates shift
+#' X1 = sample_data$X1
+#' X2 = sample_data$X2
+#' Y1 = sample_data$Y1
+#' Y2 = sample_data$Y2
+#' X.target = sample_data$X.target
+#'
+#' ## loading
+#' loading = rep(0, 100) # dimension p=100
+#' loading[98:100] = 1
+#'
+#' ## call
+#' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
+#' out <- measure_instability(mm)
+#' out$measure
+#' }
+measure_instability <- function(object, delta=0, gen.size=500, threshold=0, alpha.thres=0.01){
   spnorm.Gamma.diff = rep(0, gen.size)
   l2norm.gamma.diff = rep(0, gen.size)
 
@@ -291,7 +230,6 @@ measure_instability <- function(object, delta=0, gen.size=500, threshold=c(0,1,2
   ##### Generate Samples ######
   #############################
   gen.dim = object$L*(object$L+1)/2
-  threshold = match.arg(threshold)
   if(threshold==0){
     thres = qnorm(1-alpha.thres/(gen.dim*2))
     gen.samples = matrix(0, nrow=gen.size, ncol=gen.dim)
@@ -338,10 +276,10 @@ measure_instability <- function(object, delta=0, gen.size=500, threshold=c(0,1,2
   weight.prop = solution$weight
 
   for(g in 1:gen.size){
-    gen.matrix = matrix(NA, nrow=L, ncol=L)
+    gen.matrix = matrix(NA, nrow=object$L, ncol=object$L)
     gen.matrix[lower.tri(gen.matrix, diag=TRUE)] = gen.samples[g,]
-    for(l in 1:L){
-      for(k in 2:L){
+    for(l in 1:object$L){
+      for(k in 2:object$L){
         gen.matrix[l, k] = gen.matrix[k, l]
       }
     }
@@ -374,14 +312,33 @@ measure_instability <- function(object, delta=0, gen.size=500, threshold=c(0,1,2
 #' \item{delta}{The data-dependent ridge penalty}
 #' \item{reward.ratio}{The ratio of penalized reward over non-penalized reward}
 #' @export
+#' @examples
+#' \donttest{
+#' ## heterogenous data and covariates shift
+#' X1 = sample_data$X1
+#' X2 = sample_data$X2
+#' Y1 = sample_data$Y1
+#' Y2 = sample_data$Y2
+#' X.target = sample_data$X.target
+#'
+#' ## loading
+#' loading = rep(0, 100) # dimension p=100
+#' loading[98:100] = 1
+#'
+#' ## call
+#' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
+#' out <- decide_delta(mm)
+#' out$delta
+#' out$reward.ratio
+#' }
 decide_delta <- function(object, step_delta=0.1, MAX_iter=100, verbose=FALSE){
   #######################################
   ############### STEP-1 ################
   ## Compute Measure square on delta=0 ##
   #######################################
   measure = measure_instability(object, delta=0, gen.size=500, threshold=0, alpha.thres=0.01)$measure
-  if(threshold <=0.5){
-    print(paste("No ridge penalty suffices to yield a stable estimator"))
+  if(measure <=0.5){
+    print(paste("ridge penalty 0 suffices to yield a stable estimator"))
     out <- list(delta = 0,
                 reward.ratio = 1)
   }
@@ -389,7 +346,7 @@ decide_delta <- function(object, step_delta=0.1, MAX_iter=100, verbose=FALSE){
   ##################### STEP-2 #######################
   ## If rejected above, pick delta data-dependently ##
   ####################################################
-  if(threshold > 0.5){
+  if(measure > 0.5){
 
     solution0 = opt.weight(object$Gamma.prop, 0)
     reward0 = solution0$reward
@@ -417,14 +374,14 @@ decide_delta <- function(object, step_delta=0.1, MAX_iter=100, verbose=FALSE){
         break
       }
     }
-    solution = opt.weight(Gamma, delta)
+    solution = opt.weight(object$Gamma.prop, delta)
     reward = solution$reward
     if(verbose){
       print(paste0("The picked delta is ", round(delta,4)))
       print(paste0("Reward Ratio is ", round(reward / reward0, 4)))
     }
     out <- list(delta = delta,
-                reward.ratio = reward/reward.ratio)
+                reward.ratio = reward/reward0)
   }
   return(out)
 }

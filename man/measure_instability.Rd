@@ -2,13 +2,13 @@
 % Please edit documentation in R/Methods.R
 \name{measure_instability}
 \alias{measure_instability}
-\title{instability measurement}
+\title{measurement of instability}
 \usage{
 measure_instability(
   object,
   delta = 0,
   gen.size = 500,
-  threshold = c(0, 1, 2),
+  threshold = 0,
   alpha.thres = 0.01
 )
 }
@@ -20,7 +20,7 @@ measure_instability(
 \item{gen.size}{The generating sample size (Default = 500)}
 
 \item{threshold}{Should generated samples be filtered or not?
-If 0, use normal threshold to filter;
+if 0, use normal threshold to filter;
 if 1, use chi-square threshold to filter;
 if 2, do not filter. (Default = 0)}
 
@@ -31,4 +31,23 @@ if 2, do not filter. (Default = 0)}
 }
 \description{
 compute the instability measurement given a specific ridge penalty
+}
+\examples{
+\donttest{
+## heterogenous data and covariates shift
+X1 = sample_data$X1
+X2 = sample_data$X2
+Y1 = sample_data$Y1
+Y2 = sample_data$Y2
+X.target = sample_data$X.target
+
+## loading
+loading = rep(0, 100) # dimension p=100
+loading[98:100] = 1
+
+## call
+mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
+out <- measure_instability(mm)
+out$measure
+}
 }

@@ -15,9 +15,10 @@ Suggests:
 VignetteBuilder: knitr
 Imports:
     MASS,
-    stats
-Depends:
+    stats,
     CVXR,
     glmnet,
     intervals,
     SIHR
+Depends: 
+    R (>= 2.10)
