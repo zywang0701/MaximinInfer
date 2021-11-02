@@ -9,11 +9,7 @@
 status](https://www.r-pkg.org/badges/version/MaximinInfer)](https://CRAN.R-project.org/package=MaximinInfer)
 <!-- badges: end -->
 
-The goal of MaximinInfer is to provide functionality for the paper. The
-function is used to compute the bias corrected estimator of
-ridge-penalized maximin effect and the point estimator of its linear
-contrast. It also constructs the confidence interval for the linear
-contrast.
+The package implements the sampling and aggregation method for the covariate shift maximin effect, which was proposed in arXiv:2011.07568. It constructs the confidence interval for any linear combination of the high-dimensional maximin effect.
 
 ## Installation
 
