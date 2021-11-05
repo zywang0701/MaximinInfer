@@ -4,10 +4,18 @@
 \alias{decide_delta}
 \title{decide delta data-dependently}
 \usage{
-decide_delta(object, step_delta = 0.1, MAX_iter = 100, verbose = FALSE)
+decide_delta(
+  object,
+  gen.size = 500,
+  step_delta = 0.1,
+  MAX_iter = 100,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{object}{Object of class inheriting from "Maximin"}
+
+\item{gen.size}{The generating sample size (Default = 500)}
 
 \item{step_delta}{The step size of searching delta (Default = 0.1)}
 
@@ -24,7 +32,7 @@ decide_delta(object, step_delta = 0.1, MAX_iter = 100, verbose = FALSE)
 at first. If instable, it picks a ridge penalty data-dependently.
 }
 \examples{
-\donttest{
+## The problem is low-dimensional for testings
 ## heterogenous data and covariates shift
 X1 = sample_data$X1
 X2 = sample_data$X2
@@ -33,13 +41,12 @@ Y2 = sample_data$Y2
 X.target = sample_data$X.target
 
 ## loading
-loading = rep(0, 100) # dimension p=100
-loading[98:100] = 1
+loading = rep(0, 5) # dimension p=5
+loading[5] = 1
 
 ## call
-mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-out <- decide_delta(mm)
+mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target)
+out <- decide_delta(mm, gen.size=5)
 out$delta
 out$reward.ratio
-}
 }

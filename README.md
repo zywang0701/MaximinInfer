@@ -9,7 +9,10 @@
 status](https://www.r-pkg.org/badges/version/MaximinInfer)](https://CRAN.R-project.org/package=MaximinInfer)
 <!-- badges: end -->
 
-The package implements the sampling and aggregation method for the covariate shift maximin effect, which was proposed in arXiv:2011.07568. It constructs the confidence interval for any linear combination of the high-dimensional maximin effect.
+MaximinInfer is a package that implements the sampling and aggregation
+method for the covariate shift maximin effect, which was proposed in
+&lt;arXiv:2011.07568&gt;. It constructs the confidence interval for any
+linear combination of the high-dimensional maximin effect.
 
 ## Installation
 

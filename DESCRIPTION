@@ -1,10 +1,10 @@
 Package: MaximinInfer
 Type: Package
-Title: Inference for Maximin Effect in high-dimensional settings
-Version: 0.1.0
+Title: Inference for Maximin Effect in High-Dimensional Settings
+Version: 1.0.0
 Author: Zhenyu Wang; Zijian Guo
 Maintainer: Zhenyu Wang <wangzy0701@gmail.com>
-Description: The package implements the sampling and aggregation method for the covariate shift maximin effect, which was proposed in arXiv:2011.07568. It constructs the confidence interval for any linear combination of the high-dimensional maximin effect.
+Description: Implementation of the sampling and aggregation method for the covariate shift maximin effect, which was proposed in <arXiv:2011.07568>. It constructs the confidence interval for any linear combination of the high-dimensional maximin effect.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -12,7 +12,6 @@ RoxygenNote: 7.1.1
 Suggests:
     knitr,
     rmarkdown
-VignetteBuilder: knitr
 Imports:
     MASS,
     stats,

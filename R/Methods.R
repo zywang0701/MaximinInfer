@@ -24,7 +24,7 @@
 #' @import CVXR
 #'
 #' @examples
-#' \donttest{
+#' ## The problem is low-dimensional and we do sampling only 5 times instead of 500 for testings
 #' ## heterogenous data and covariates shift
 #' X1 = sample_data$X1
 #' X2 = sample_data$X2
@@ -33,13 +33,12 @@
 #' X.target = sample_data$X.target
 #'
 #' ## loading
-#' loading = rep(0, 100) # dimension p=100
-#' loading[98:100] = 1
+#' loading = rep(0, 5) # dimension p=5
+#' loading[5] = 1
 #'
 #' ## call
 #' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-#' mmInfer <- infer(mm)
-#' }
+#' mmInfer <- infer(mm, gen.size=5)
 infer <- function(object, delta=0, gen.size=500, threshold=0, alpha=0.05, alpha.thres=0.01){
   ##############################
   ####### Maximin Effects ######
@@ -164,7 +163,7 @@ infer <- function(object, delta=0, gen.size=500, threshold=0, alpha=0.05, alpha.
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' ## The problem is low-dimensional and we do sampling only 5 times instead of 500 for testings
 #' ## heterogenous data and covariates shift
 #' X1 = sample_data$X1
 #' X2 = sample_data$X2
@@ -173,12 +172,11 @@ infer <- function(object, delta=0, gen.size=500, threshold=0, alpha=0.05, alpha.
 #' X.target = sample_data$X.target
 #'
 #' ## loading
-#' loading = rep(0, 100) # dimension p=100
-#' loading[98:100] = 1
+#' loading = rep(0, 5) # dimension p=5
+#' loading[5] = 1
 #'
 #' ## call
-#' mmInfer <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-#' }
+#' mmInfer <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, gen.size=5)
 MaximinInfer <- function(Xlist, Ylist, loading, X.target=NULL, cov.target=NULL,
                          covariate.shift=TRUE, lam.value=c("CV","CV.min"),
                          intercept=TRUE, intercept.loading=FALSE, delta=0,
@@ -205,7 +203,7 @@ MaximinInfer <- function(Xlist, Ylist, loading, X.target=NULL, cov.target=NULL,
 #' \item{measure}{The measurement of instability}
 #' @export
 #' @examples
-#' \donttest{
+#' ## The problem is low-dimensional and we do sampling only 5 times instead of 500 for testings
 #' ## heterogenous data and covariates shift
 #' X1 = sample_data$X1
 #' X2 = sample_data$X2
@@ -214,14 +212,13 @@ MaximinInfer <- function(Xlist, Ylist, loading, X.target=NULL, cov.target=NULL,
 #' X.target = sample_data$X.target
 #'
 #' ## loading
-#' loading = rep(0, 100) # dimension p=100
-#' loading[98:100] = 1
+#' loading = rep(0, 5)
+#' loading[5] = 1
 #'
 #' ## call
 #' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-#' out <- measure_instability(mm)
+#' out <- measure_instability(mm, gen.size=5)
 #' out$measure
-#' }
 measure_instability <- function(object, delta=0, gen.size=500, threshold=0, alpha.thres=0.01){
   spnorm.Gamma.diff = rep(0, gen.size)
   l2norm.gamma.diff = rep(0, gen.size)
@@ -304,6 +301,7 @@ measure_instability <- function(object, delta=0, gen.size=500, threshold=0, alph
 #' at first. If instable, it picks a ridge penalty data-dependently.
 #'
 #' @param object Object of class inheriting from "Maximin"
+#' @param gen.size The generating sample size (Default = 500)
 #' @param step_delta The step size of searching delta (Default = 0.1)
 #' @param MAX_iter Maximum of iterations for searching (Default = 100)
 #' @param verbose Print information about delta and reward (Default = `FALSE`)
@@ -313,7 +311,7 @@ measure_instability <- function(object, delta=0, gen.size=500, threshold=0, alph
 #' \item{reward.ratio}{The ratio of penalized reward over non-penalized reward}
 #' @export
 #' @examples
-#' \donttest{
+#' ## The problem is low-dimensional for testings
 #' ## heterogenous data and covariates shift
 #' X1 = sample_data$X1
 #' X2 = sample_data$X2
@@ -322,21 +320,20 @@ measure_instability <- function(object, delta=0, gen.size=500, threshold=0, alph
 #' X.target = sample_data$X.target
 #'
 #' ## loading
-#' loading = rep(0, 100) # dimension p=100
-#' loading[98:100] = 1
+#' loading = rep(0, 5) # dimension p=5
+#' loading[5] = 1
 #'
 #' ## call
-#' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-#' out <- decide_delta(mm)
+#' mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target)
+#' out <- decide_delta(mm, gen.size=5)
 #' out$delta
 #' out$reward.ratio
-#' }
-decide_delta <- function(object, step_delta=0.1, MAX_iter=100, verbose=FALSE){
+decide_delta <- function(object, gen.size=500, step_delta=0.1, MAX_iter=100, verbose=FALSE){
   #######################################
   ############### STEP-1 ################
   ## Compute Measure square on delta=0 ##
   #######################################
-  measure = measure_instability(object, delta=0, gen.size=500, threshold=0, alpha.thres=0.01)$measure
+  measure = measure_instability(object, delta=0, gen.size=gen.size, threshold=0, alpha.thres=0.01)$measure
   if(measure <=0.5){
     print(paste("ridge penalty 0 suffices to yield a stable estimator"))
     out <- list(delta = 0,

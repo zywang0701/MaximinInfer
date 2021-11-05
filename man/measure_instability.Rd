@@ -33,7 +33,7 @@ if 2, do not filter. (Default = 0)}
 compute the instability measurement given a specific ridge penalty
 }
 \examples{
-\donttest{
+## The problem is low-dimensional and we do sampling only 5 times instead of 500 for testings
 ## heterogenous data and covariates shift
 X1 = sample_data$X1
 X2 = sample_data$X2
@@ -42,12 +42,11 @@ Y2 = sample_data$Y2
 X.target = sample_data$X.target
 
 ## loading
-loading = rep(0, 100) # dimension p=100
-loading[98:100] = 1
+loading = rep(0, 5)
+loading[5] = 1
 
 ## call
 mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-out <- measure_instability(mm)
+out <- measure_instability(mm, gen.size=5)
 out$measure
-}
 }
