@@ -3,7 +3,7 @@ Type: Package
 Title: Inference for Maximin Effects in High-dimensional Settings
 Version: 2.0.0
 Author: Zhenyu Wang; Zijian Guo
-Maintainer: Zhenyu Wang <wangzy0701@gmail.com>
+Maintainer: Zhenyu Wang <zw425@stat.rutgers.edu>
 Description: Implementation of the sampling and aggregation method for the covariate shift maximin effect, which was proposed in <arXiv:2011.07568>. It constructs the confidence interval for any linear combination of the high-dimensional maximin effect.
 License: GPL-3
 Encoding: UTF-8
