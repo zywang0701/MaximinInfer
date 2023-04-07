@@ -2,18 +2,19 @@
 % Please edit documentation in R/Maximin.R
 \name{Maximin}
 \alias{Maximin}
-\title{Class Maximin}
+\title{Returns a list that provides materials for later inference method.}
 \usage{
 Maximin(
   Xlist,
   Ylist,
-  loading,
-  X.target = NULL,
-  cov.target = NULL,
-  covariate.shift = TRUE,
-  lam.value = c("CV", "CV.min"),
+  loading.mat,
+  X0 = NULL,
+  cov.shift = TRUE,
+  cov0 = NULL,
   intercept = TRUE,
-  intercept.loading = FALSE
+  intercept.loading = FALSE,
+  lambda = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -21,36 +22,57 @@ Maximin(
 
 \item{Ylist}{list of outcome vector for source data, of length \eqn{L}}
 
-\item{loading}{Loading, of length \eqn{p}}
+\item{loading.mat}{Loading matrix, of dimension \eqn{n.loading} x \eqn{p}, each column corresponds to a
+loading of interest}
 
-\item{X.target}{Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)}
+\item{X0}{design matrix for target data, of dimension \eqn{n0} x \eqn{p} (default =
+\code{NULL})}
 
-\item{cov.target}{Covariance matrix for target data, of dimension \eqn{p} x \eqn{p} (default = `NULL`)}
+\item{cov.shift}{Covariate shifts or not between source and target data (default = \code{TRUE})}
 
-\item{covariate.shift}{Covariate shifts or not between source and target data (default = `TRUE`)}
+\item{cov0}{Covariance matrix for target data, of dimension \eqn{p} x \eqn{p} (default = \code{NULL})}
 
-\item{lam.value}{The method to be used to obtain Lasso estimator of high-dimensional regression vector for each group}
+\item{intercept}{Should intercept be fitted for the initial estimator
+(default = \code{TRUE})}
 
-\item{intercept}{Should intercept be fitted for the initial estimator (default = `TRUE`)}
+\item{intercept.loading}{Should intercept term be included for the loading
+(default = \code{FALSE})}
 
-\item{intercept.loading}{Should intercept be included for the loading (default = `FALSE`)}
+\item{lambda}{The tuning parameter in fitting initial model. If \code{NULL},
+it will be picked by cross-validation. (default = \code{NULL})}
+
+\item{verbose}{Should intermediate message(s) be printed. (default = \code{FALSE})}
 }
 \value{
-`Maximin` returns an object of class "Maximin". The function `infer` is used to do further inference.
-An object of class "Maximin" is a list containing the following components.
-\item{Gamma.prop}{The proposed debiased regression covariance matrix}
-\item{Coef.est}{matrix, of dimension \eqn{p(+1)} x \eqn{L} where each column corresponds to the Lasso estimator of the high-dimensional regression vector for a given group}
-\item{Point.vec}{vector, of length \eqn{L} with the l-th entry as the debiased estimator of the linear combination of the l-th high-dimensional regression vector}
-\item{L}{The number of groups}
-\item{gen.mu}{The mean vector for sampling the regression covariance matrix}
-\item{gen.Cov}{The variance matrix for sampling the regression covariance matrix}
+The returned list contains the following components:
+\item{Gamma.plugin}{The plugin regression covariance matrix}
+\item{Gamma.debias}{The proposed debiased regression covariance matrix}
+\item{Var.Gamma}{The variance matrix for sampling the regression covariance matrix}
+\item{fits.info}{The list of length \eqn{L}, that contains the initial coefficient estimators and variance of fitted residuals.}
+\item{Points.info}{The list of length \eqn{L}, that contains the initial debiased estimator for linear combinations and its corresponding standard error.}
 }
 \description{
-`Maximin` returns the class "Maximin", which provides materials for later inference method.
+Given list of observations, compute the bias-corrected initial estimators and do bias-correction to the regressopm covariance matrix.
 }
 \details{
-The algorithm implemented scenarios with or without covariate shift. If `cov.target` is specified,
-the `X.target` will be ignored; if not, while `X.target` is specified, `cov.target` will be estimated
-by `X.target`. If both are not specified, the algorithm will automatically set `covariate.shift` as
-`FALSE`.
+The algorithm implemented scenarios with or without covariate shift. If \code{cov0} is specified,
+the \code{X0} will be ignored; if not, while \code{X0} is specified, \code{cov0} will be estimated
+by \code{X0}. If both are not specified, the algorithm will automatically set \code{cov.shift} as
+\code{FALSE}.
+}
+\examples{
+L = 2
+n1 = n2 = 100; p = 4
+X1 = MASS::mvrnorm(n1, rep(0,p), Sigma=diag(p))
+X2 = MASS::mvrnorm(n2, rep(0,p), Sigma=0.5*diag(p))
+b1 = seq(1,4)/10; b2 = rep(0.2, p)
+y1 = as.vector(X1\%*\%b1+rnorm(n1)); y2 = as.vector(X2\%*\%b2+rnorm(n2))
+loading1 = rep(0.4, p)
+loading2 = c(-0.5, -0.5, rep(0,p-2))
+loading.mat = cbind(loading1, loading2)
+cov0 = diag(p)
+mm = Maximin(list(X1,X2),list(y1,y2),loading.mat,cov0=cov0)
+
+# inference
+out = Infer(mm, gen.size=10)
 }

@@ -11,7 +11,7 @@ status](https://www.r-pkg.org/badges/version/MaximinInfer)](https://CRAN.R-proje
 
 MaximinInfer is a package that implements the sampling and aggregation
 method for the covariate shift maximin effect, which was proposed in
-&lt;arXiv:2011.07568&gt;. It constructs the confidence interval for any
+\<arXiv:2011.07568\>. It constructs the confidence interval for any
 linear combination of the high-dimensional maximin effect.
 
 ## Installation
@@ -42,8 +42,6 @@ The data is heterogeneous and covariates shift between source and target
 data
 
 ``` r
-set.seed(0)
-
 ## number of groups
 L=2
 ## dimension
@@ -82,78 +80,82 @@ b2[98:100] = 0.5*c(0.5, -0.5, -0.5)
 Y2 = X2%*%b2 + rnorm(n2)
 
 ## Target Data, covariate shift
-n.target = 100
-mean.target = rep(0, p)
-cov.target = cov.source
-for(i in 1:p) cov.target[i, i] = 1.5
-for(i in 1:5){
-  for(j in 1:5){
-    if(i!=j) cov.target[i, j] = 0.9
-  }
-}
-for(i in 99:100){
-  for(j in 99:100){
-    if(i!=j) cov.target[i, j] = 0.9
-  }
-}
-X.target = MASS::mvrnorm(n.target, mu=mean.target, Sigma=cov.target)
+n0 = 100
+mean0 = rep(0, p)
+cov0 = cov.source
+for(i in 1:p) cov0[i, i] = 1.5
+for(i in 1:5) for(j in 1:5) if(i!=j) cov0[i, j] = 0.9
+for(i in 99:100) for(j in 99:100) if(i!=j) cov0[i, j] = 0.9
+X0 = MASS::mvrnorm(n0, mu=mean0, Sigma=cov0)
 ```
 
+Input the loading. Note that it allows for multiple loading
+simultaneously.
+
 ``` r
-set.seed(0)
-## loading
-loading = rep(0, 100) # dimension p=100
-loading[98:100] = 1
-
-## call - use wrapper function
-# mmInfer <- MaximinInfer(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-
-## call - separate steps
-mm <- Maximin(list(X1, X2), list(Y1, Y2), loading, X.target, covariate.shift = TRUE)
-mmInfer <- infer(mm)
+loading.mat = matrix(0, nrow=100, ncol=2) # dimension p=100
+loading.mat[96:100, 1] = 0.4
+loading.mat[99:100, 2] = 0.8
 ```
 
-Weights for groups
+Call function `Maximin()`. By setting the argument verbose, you can
+choose whether or not to display the intermediate bias-correction
+results.
 
 ``` r
-mmInfer$weight
-#> [1] 0.4729686 0.5270314
+mm <- Maximin(list(X1,X2), list(Y1,Y2), loading.mat, X0, cov.shift=TRUE, verbose=TRUE)
+#> ======> Bias Correction for initial estimators.... 
+#> Computing LF for loading (1/2)... 
+#> The projection direction is identified at mu = 0.026739at step =6
+#> Computing LF for loading (2/2)... 
+#> The projection direction is identified at mu = 0.040108at step =5
+#> Computing LF for loading (1/2)... 
+#> The projection direction is identified at mu = 0.026739at step =6
+#> Computing LF for loading (2/2)... 
+#> The projection direction is identified at mu = 0.026739at step =6
+#> ======> Bias Correction for matrix Gamma.... 
+#> Computing LF for loading (1/1)... 
+#> The projection direction is identified at mu = 0.026739at step =6
+#> Computing LF for loading (1/1)... 
+#> The projection direction is identified at mu = 0.026739at step =6
+#> Computing LF for loading (1/1)... 
+#> The projection direction is identified at mu = 0.005282at step =10
+#> Computing LF for loading (1/1)... 
+#> The projection direction is identified at mu = 0.007923at step =9
 ```
 
-Point estimator for the linear contrast
+The following inference method is:
 
 ``` r
-mmInfer$point
-#> [1] -0.3883289
+out <- Infer(mm, gen.size=200)
 ```
 
-Confidence Interval for point estimator
+The weights for each group:
 
 ``` r
-mmInfer$CI
+out$weight
+#> [1] 0.5703927 0.4296073
+```
+
+The point estimator and its corresponding confidence interval for each
+loading:
+
+``` r
+out$mminfer
+#> [[1]]
+#> [[1]]$point
+#> [1] -0.212938
+#> 
+#> [[1]]$CI
 #>           lower      upper
-#> [1,] -0.9004034 0.09923036
-```
-
-The default ridge penalty used is 0, if you want to make sure the
-estimator is more stable, we recommend adding a data-dependent penalty.
-The function below will help you tell whether zero penalty suffices to
-yield a stable estimator, if not, it will return a suggested penalty
-level.
-
-``` r
-out <- decide_delta(mm)
-out$delta
-#> [1] 1.2
-out$reward.ratio
-#> [1] 0.9503952
-```
-
-We can measure instability for specific ridge penalty
-
-``` r
-out2 <- measure_instability(mm, delta=out$delta)
-# if measure < 0.5, it's stable enough; 
-out2$measure
-#> [1] 0.04840878
+#> [1,] -0.4136389 0.01993818
+#> 
+#> 
+#> [[2]]
+#> [[2]]$point
+#> [1] -0.6861211
+#> 
+#> [[2]]$CI
+#>         lower      upper
+#> [1,] -1.20779 -0.1704235
 ```

@@ -1,240 +1,401 @@
-#' Class Maximin
-#'
-#' @description
-#' `Maximin` returns the class "Maximin", which provides materials for later inference method.
-#'
+#' Returns a list that provides materials for later inference method.
+#' @description Given list of observations, compute the bias-corrected initial estimators and do bias-correction to the regressopm covariance matrix.
 #' @details
-#' The algorithm implemented scenarios with or without covariate shift. If `cov.target` is specified,
-#' the `X.target` will be ignored; if not, while `X.target` is specified, `cov.target` will be estimated
-#' by `X.target`. If both are not specified, the algorithm will automatically set `covariate.shift` as
-#' `FALSE`.
-#'
+#' The algorithm implemented scenarios with or without covariate shift. If \code{cov0} is specified,
+#' the \code{X0} will be ignored; if not, while \code{X0} is specified, \code{cov0} will be estimated
+#' by \code{X0}. If both are not specified, the algorithm will automatically set \code{cov.shift} as
+#' \code{FALSE}.
 #' @param Xlist list of design matrix for source data, of length \eqn{L}
 #' @param Ylist list of outcome vector for source data, of length \eqn{L}
-#' @param loading Loading, of length \eqn{p}
-#' @param X.target Design matrix for target data, of dimension \eqn{n.target} x \eqn{p} (default = `NULL`)
-#' @param cov.target Covariance matrix for target data, of dimension \eqn{p} x \eqn{p} (default = `NULL`)
-#' @param covariate.shift Covariate shifts or not between source and target data (default = `TRUE`)
-#' @param lam.value The method to be used to obtain Lasso estimator of high-dimensional regression vector for each group
-#' @param intercept Should intercept be fitted for the initial estimator (default = `TRUE`)
-#' @param intercept.loading Should intercept be included for the loading (default = `FALSE`)
+#' @param loading.mat Loading matrix, of dimension \eqn{n.loading} x \eqn{p}, each column corresponds to a
+#'   loading of interest
+#' @param X0 design matrix for target data, of dimension \eqn{n0} x \eqn{p} (default =
+#'   \code{NULL})
+#' @param cov.shift Covariate shifts or not between source and target data (default = \code{TRUE})
+#' @param cov0 Covariance matrix for target data, of dimension \eqn{p} x \eqn{p} (default = \code{NULL})
+#' @param intercept Should intercept be fitted for the initial estimator
+#'   (default = \code{TRUE})
+#' @param intercept.loading Should intercept term be included for the loading
+#'   (default = \code{FALSE})
+#' @param lambda The tuning parameter in fitting initial model. If \code{NULL},
+#'   it will be picked by cross-validation. (default = \code{NULL})
+#' @param verbose Should intermediate message(s) be printed. (default = \code{FALSE})
 #'
-#' @return
-#' `Maximin` returns an object of class "Maximin". The function `infer` is used to do further inference.
-#' An object of class "Maximin" is a list containing the following components.
-#' \item{Gamma.prop}{The proposed debiased regression covariance matrix}
-#' \item{Coef.est}{matrix, of dimension \eqn{p(+1)} x \eqn{L} where each column corresponds to the Lasso estimator of the high-dimensional regression vector for a given group}
-#' \item{Point.vec}{vector, of length \eqn{L} with the l-th entry as the debiased estimator of the linear combination of the l-th high-dimensional regression vector}
-#' \item{L}{The number of groups}
-#' \item{gen.mu}{The mean vector for sampling the regression covariance matrix}
-#' \item{gen.Cov}{The variance matrix for sampling the regression covariance matrix}
-#'
+#' @return The returned list contains the following components:
+#' \item{Gamma.plugin}{The plugin regression covariance matrix}
+#' \item{Gamma.debias}{The proposed debiased regression covariance matrix}
+#' \item{Var.Gamma}{The variance matrix for sampling the regression covariance matrix}
+#' \item{fits.info}{The list of length \eqn{L}, that contains the initial coefficient estimators and variance of fitted residuals.}
+#' \item{Points.info}{The list of length \eqn{L}, that contains the initial debiased estimator for linear combinations and its corresponding standard error.}
 #' @export
-#' @importFrom stats median
+#'
+#' @importFrom stats coef
 #' @importFrom SIHR LF
 #' @import CVXR glmnet
-Maximin <- function(Xlist, Ylist, loading, X.target=NULL, cov.target=NULL,
-                    covariate.shift=TRUE, lam.value=c("CV","CV.min"),
-                    intercept=TRUE, intercept.loading=FALSE){
+#'
+#' @examples
+#' L = 2
+#' n1 = n2 = 100; p = 4
+#' X1 = MASS::mvrnorm(n1, rep(0,p), Sigma=diag(p))
+#' X2 = MASS::mvrnorm(n2, rep(0,p), Sigma=0.5*diag(p))
+#' b1 = seq(1,4)/10; b2 = rep(0.2, p)
+#' y1 = as.vector(X1%*%b1+rnorm(n1)); y2 = as.vector(X2%*%b2+rnorm(n2))
+#' loading1 = rep(0.4, p)
+#' loading2 = c(-0.5, -0.5, rep(0,p-2))
+#' loading.mat = cbind(loading1, loading2)
+#' cov0 = diag(p)
+#' mm = Maximin(list(X1,X2),list(y1,y2),loading.mat,cov0=cov0)
+#'
+#' # inference
+#' out = Infer(mm, gen.size=10)
+Maximin <- function(Xlist, Ylist, loading.mat, X0=NULL, cov.shift=TRUE, cov0=NULL, intercept=TRUE, intercept.loading=FALSE, lambda=NULL, verbose=FALSE){
 
-  if(!intercept) intercept.loading=FALSE
-  lam.value = match.arg(lam.value)
-
-  ############################################
-  ########### Transfer Source Data ###########
-  ############################################
-  if((is.list(Xlist)==FALSE)||(is.list(Ylist)==FALSE)) stop("Error: check the type of Xlist and Ylist, they must be list")
-  if(length(Xlist)!=length(Ylist)) stop("Error: check the length of Xlist and Ylist")
+  ### Basic Preparation ###
+  Xlist = lapply(Xlist, FUN=as.matrix)
+  Ylist = lapply(Ylist, FUN=as.vector)
+  loading.mat = as.matrix(loading.mat)
   L = length(Xlist)
-  n.x.vec = rep(0, L)
-  n.y.vec = rep(0, L)
-  p.vec = rep(0, L)
+  p = ncol(Xlist[[1]]) + as.integer(intercept)
+  ns = sapply(Xlist, nrow)
+  n.loading = ncol(loading.mat)
+
+  ### Check arguments ###
+  if(!is.logical(verbose)) verbose=TRUE
+  if(intercept==FALSE && intercept.loading==TRUE){
+    intercept.loading = FALSE
+    cat("Argument 'intercept.loading' is set to FALSE, because 'intercept' is FALSE \n")
+  }
+  check.args(Xlist, Ylist, loading.mat, X0, cov.shift, cov0, intercept, intercept.loading, lambda, verbose)
+  if(!is.null(X0)) X0 = as.matrix(X0)
+  if(is.null(X0)&&is.null(cov0)){
+    cov.shift=FALSE
+    X.source = do.call(rbind, Xlist)
+    X0 = X.source
+  }
+
+  ### Specify relevant functions ###
+  funs.all = relevant.funs(intercept=intercept)
+  train.fun = funs.all$train.fun
+  pred.fun = funs.all$pred.fun
+  dev.fun = funs.all$dev.fun
+
+  ####################################################################
+  #################### Part - Initial Estimators #####################
+  ####################################################################
+  if(verbose) cat("======> Bias Correction for initial estimators.... \n")
+  fits.info = rep(list(NA), L)
+  Points.info = rep(list(NA), L)
   for(l in 1:L){
-    n.x.vec[l] = dim(Xlist[[l]])[1]
-    p.vec[l] = dim(Xlist[[l]])[2]
-    n.y.vec[l] = length(Ylist[[l]])
-    if(n.x.vec[l]!=n.y.vec[l]) stop(paste("Error: X and Y to the group",l,"has different number of samples"))
-  }
-  if(!all(p.vec==p.vec[1])) stop("Error: check the dimension p of each X, they must be the same")
-  X.source = do.call(rbind, Xlist)
-  Y.source = do.call(c, Ylist)
-  idx.source = rep(1:L, times=n.y.vec)
-
-  ##################################
-  ########### Check Input ##########
-  ##################################
-  if(dim(X.source)[2]!=length(loading)){
-    stop("Error: check length of loading")
-  }
-  if((!is.null(X.target))&&(dim(X.source)[2]!=dim(X.target)[2])){
-    stop("Error: check dimensions of Target Data")
-  }
-  if((!is.null(cov.target))&&((dim(X.source)[2]!=dim(cov.target)[2])||(dim(cov.target)[1]!=dim(cov.target)[2]))){
-    stop("Error: check dimensions of cov.target")
+    Xlist[[l]] = scale(Xlist[[l]], center=TRUE, scale=FALSE)
+    y = Ylist[[l]]
+    X = Xlist[[l]]
+    beta.init = as.vector(train.fun(X, y, lambda=lambda)$lasso.est)
+    sparsity = sum(abs(beta.init)>1e-4)
+    pred = pred.fun(X, beta.init)
+    dev = dev.fun(pred, y, sparsity)
+    Est = LF(X, y, loading.mat, model='linear', intercept=intercept, intercept.loading=intercept.loading,
+             beta.init=beta.init, verbose=verbose)
+    fits.info[[l]] = list(beta.init = beta.init,
+                          dev = dev)
+    Points.info[[l]] = list(est.debias.vec = Est$est.debias.vec,
+                            se.vec = Est$se.vec)
   }
 
-  if(is.null(X.target)) X.target = X.source  # the code adapts to No target setting
-  n.source = nrow(X.source)
-  n.target = nrow(X.target)
-  p = ncol(X.source) + as.integer(intercept)
-  L = length(unique(idx.source))
-  uni_groups = sort(unique(idx.source))
+  ##############################################################################
+  #################### Bias-corrected estimators for Gamma #####################
+  ##############################################################################
+  if(!is.null(X0)){
+    ### centralize X0 ###
+    X0 = scale(X, center=TRUE, scale=FALSE)
+    ### pred0.mat ###
+    pred0.mat = matrix(NA, nrow=nrow(X0), ncol=L)
+    for(l in 1:L){
+      pred0.mat[,l] = pred.fun(X0, fits.info[[l]]$beta.init)
+    }
+  }
 
-  Coef.est = matrix(0, p, L)  # estimators of groups
-  Pred.vec = rep(0, n.source)  # predicted outcome of source data
-  Pred.mat.target = matrix(0, n.target, L)  # predicted outcomes of target data
-  Point.vec = rep(0, L)  # debiased point estimators
-  Var.vec = rep(0, L)  # variance of residual
-  SE.vec = rep(0, L)  # SE of loading
-  for(l in 1:L){
-    ## obtain estimators of group l using Lasso
-    index.set = which(idx.source==uni_groups[l])
-    X = X.source[index.set, ]
-    Y = Y.source[index.set]
-    col.norm = 1/sqrt(1/nrow(X)*diag(t(X)%*%X))
-    X.norm = X %*% diag(col.norm)
-    Coef.est[, l] = Lasso(X.norm, Y, lambda=lam.value, intercept=intercept)
+  ### compute Sigma0 ###
+  if(is.null(cov0)){
+    if(intercept) X0 = cbind(1, X0)
+    Sigma0 = t(X0)%*%X0/nrow(X0)
+  }
+  if(!is.null(cov0)){
+    Sigma0 = matrix(0, p, p)
     if(intercept){
-      Coef.est[-1, l] = Coef.est[-1, l]*col.norm
-      Pred.vec[index.set] = X%*%Coef.est[-1, l] + Coef.est[1, l]
-      Pred.mat.target[, l] = X.target%*%Coef.est[-1, l] + Coef.est[1, l]
+      Sigma0[1,1] = 1; Sigma0[-1,-1] = cov0
     }else{
-      Coef.est[, l] = Coef.est*col.norm
-      Pred.vec[index.set] = X%*%Coef.est[, l]
-      Pred.mat.target[, l] = X.target%*%Coef.est[, l]
-    }
-    ## obtain variance of residual for group l
-    supp.l = which(abs(Coef.est[, l])>0.01)
-    n.eff = max(0.9*nrow(X), nrow(X)-length(supp.l))
-    Var.vec[l] = sum((Y - Pred.vec[index.set])^2) / n.eff
-    ## bias correction for <loading, b^{(l)}>, leveraged by package SIHR
-    est <- LF(X, Y, loading, intercept.loading=intercept.loading, intercept=intercept, init.coef=Coef.est[,l], verbose=FALSE)
-    SE.vec[l] = est$se
-    Point.vec[l] = est$prop.est
-  }
-  #########################################
-  ######### compte Gamma.plugin ###########
-  #########################################
-  if(!is.null(cov.target)){
-    Sigma.target.est = matrix(0, p, p)
-    if(intercept){
-      Sigma.target.est[1, 1] = 1
-      Sigma.target.est[-1, -1] = cov.target
-    }else{
-      Sigma.target.est = cov.target
-    }
-  }else{
-    if(covariate.shift){
-      if(intercept){
-        X.target.b = cbind(1, X.target)
-        Sigma.target.est = (1/n.target)*(t(X.target.b)%*%X.target.b)
-      }else{
-        Sigma.target.est = (1/n.target)*(t(X.target)%*%X.target)
-      }
-    }else{
-      if(intercept){
-        X.source.b = cbind(1, X.source)
-        X.target.b = cbind(1, X.target)
-        Sigma.target.est = (t(X.source.b)%*%X.source.b + t(X.target.b)%*%X.target.b)/(n.source+n.target)
-      }else{
-        Sigma.target.est = (t(X.source)%*%X.source + t(X.target)%*%X.target)/(n.source + n.target)
-      }
+      Sigma0 = cov0
     }
   }
-  Gamma.plugin = t(Coef.est)%*%Sigma.target.est%*%Coef.est
-  Omega.est = Sigma.target.est%*%Coef.est
 
-  ####################################################
-  ##### conduct bias correction for Gamma.plugin #####
-  ####################################################
-  Gamma.prop = Gamma.plugin
-  Proj.array = array(NA, dim=c(L, L, p))
+  ### Gamma.plugin ###
+  Gamma.plugin = matrix(0, L, L)
+  for(l in 1:L) for(k in l:L) Gamma.plugin[l,k] = as.numeric(t(fits.info[[l]]$beta.init)%*%Sigma0%*%(fits.info[[k]]$beta.init))
+  for(l in 2:L) for(k in 1:(l-1)) Gamma.plugin[l,k] = Gamma.plugin[k,l]
+
+  ### Bias-corrected estimators: Gamma.debias ###
+  if(verbose) cat("======> Bias Correction for matrix Gamma.... \n")
+  correct.mat = matrix(0, L, L)
+  Proj.array = array(NA, dim=c(L,L,p))
   for(l in 1:L){
-    for(k in l:L){
-      index.set.l = which(idx.source==uni_groups[l])
-      index.set.k = which(idx.source==uni_groups[k])
-      X.l = X.source[index.set.l, ]
-      X.k = X.source[index.set.k, ]
-      Y.l = Y.source[index.set.l]
-      Y.k = Y.source[index.set.k]
-      Pred.l = Pred.vec[index.set.l]
-      Pred.k = Pred.vec[index.set.k]
+    for(k in 1:L){
+      loading = as.vector(Sigma0 %*% fits.info[[k]]$beta.init)
+      Est.lk = LF(Xlist[[l]], Ylist[[l]], loading, intercept=intercept, beta.init=fits.info[[l]]$beta.init, verbose=verbose)
+      correct.mat[l,k] = Est.lk$est.debias.vec - Est.lk$est.plugin.vec
+      Proj.array[l,k,] = as.vector(Est.lk$proj.mat)
+    }
+  }
+  Gamma.debias = matrix(0, L, L)
+  for(l in 1:L) for(k in l:L) Gamma.debias[l,k] = Gamma.plugin[l,k] + correct.mat[l,k] + correct.mat[k,l]
+  for(l in 2:L) for(k in 1:(l-1)) Gamma.debias[l,k] = Gamma.debias[k,l]
 
-      if(intercept){
-        X.l = cbind(1, X.l)
-        X.k = cbind(1, X.k)
-      }
-      if(covariate.shift){
-        output <- Gamma.shift(Gamma.plugin[l, k], X.l, X.k, Omega.est[, l], Omega.est[, k],
-                              Y.l, Y.k, Pred.l, Pred.k)
-        Gamma.prop[l, k] = output$est
-        Proj.array[l, k, ] = output$proj.lk
-        Proj.array[k, l, ] = output$proj.kl
-      }else{
-        Gamma.prop[l, k] = Gamma.plugin[l, k]+t(Coef.est[,l])%*%t(X.k)%*%(Y.k-Pred.k)/nrow(X.k)+
-          t(Coef.est[,k])%*%t(X.l)%*%(Y.l-Pred.l)/nrow(X.l)
-        Proj.array[l, k, ] = Coef.est[,k]
-        Proj.array[k, l, ] = Coef.est[,l]
-      }
-    }
-  }
-  for(l in 2:L){
-    for(k in 1:(l-1)){
-      Gamma.prop[l, k] = Gamma.prop[k, l]
-    }
-  }
-  ######################################################################
-  ################## to obtain sampling materials ######################
-  ## compute mean and covariance matrix for the sampling distribution ##
-  ######################################################################
-  gen.mu = Gamma.prop[lower.tri(Gamma.prop, diag=TRUE)]
+  ############################################################
+  #################### Variance matrix V #####################
+  ############################################################
+  # gen.mu = Gamma.debias[lower.tri(Gamma.debias, diag=TRUE)]
   gen.dim = L*(L+1)/2
-  gen.Cov = matrix(NA, nrow=gen.dim, ncol=gen.dim)
+  Var.Gamma = matrix(NA, nrow=gen.dim, ncol=gen.dim)
   for(k1 in 1:L){
     for(l1 in k1:L){
-      index1 = index.map(L, l1, k1)
       for(k2 in 1:L){
         for(l2 in k2:L){
-          index2 = index.map(L, l2, k2)
-          index.set.l1 = which(idx.source==uni_groups[l1])
-          index.set.k1 = which(idx.source==uni_groups[k1])
-          index.set.l2 = which(idx.source==uni_groups[l2])
-          index.set.k2 = which(idx.source==uni_groups[k2])
-          X.l1 = X.source[index.set.l1, ]
-          X.k1 = X.source[index.set.k1, ]
-          X.l2 = X.source[index.set.l2, ]
-          X.k2 = X.source[index.set.k2, ]
+          ind1 = index.map(L,l1,k1)
+          ind2 = index.map(L,l2,k2)
+
+          X.l1 = Xlist[[l1]]; X.k1 = Xlist[[k1]]
           if(intercept){
-            X.l1 = cbind(1, X.l1)
-            X.k1 = cbind(1, X.k1)
-            X.l2 = cbind(1, X.l2)
-            X.k2 = cbind(1, X.k2)
+            X.l1 = cbind(1, X.l1); X.k1 = cbind(1, X.k1)
           }
-          if(!is.null(cov.target)){
-            gen.Cov[index1, index2] <- cov.inner.shift.known(Var.vec, l1, k1, l2, k2,
-                                                             X.l1, X.k1, X.l2, X.k2,
-                                                             Proj.array)
+          Sigma.l1 = t(X.l1)%*%X.l1/nrow(X.l1); Sigma.k1 = t(X.k1)%*%X.k1/nrow(X.k1)
+
+          val1 = fits.info[[l1]]$dev/nrow(X.l1)*Proj.array[l1,k1,]%*%Sigma.l1%*%(Proj.array[l2,k2,]*(l2==l1) + Proj.array[k2,l2,]*(k2==l1))
+          val2 = fits.info[[k1]]$dev/nrow(X.k1)*Proj.array[k1,l1,]%*%Sigma.k1%*%(Proj.array[l2,k2,]*(l2==k1) + Proj.array[k2,l2,]*(k2==k1))
+          if(is.null(cov0)){
+            val3 = mean((diag(pred0.mat[,k1]%*%t(pred0.mat[,l1]))-mean(pred0.mat[,k1]*pred0.mat[,l1]))*(diag(pred0.mat[,k2]%*%t(pred0.mat[,l2]))-mean(pred0.mat[,k2]*pred0.mat[,l2])))
+            val3 = val3/nrow(X0)
           }else{
-            gen.Cov[index1, index2] <- cov.inner.shift(Var.vec, l1, k1, l2, k2,
-                                                       X.l1, X.k1, X.l2, X.k2,
-                                                       Pred.mat.target, Proj.array)
+            val3 = 0
           }
+          val = val1+val2+val3
+
+          Var.Gamma[ind1, ind2] = val
         }
       }
     }
   }
   tau = 0.2
-  gen.Cov = gen.Cov + diag(max(tau*diag(gen.Cov), 1/floor(n.source/L)), dim(gen.Cov)[2])
+  Var.Gamma = Var.Gamma + diag(max(tau*diag(Var.Gamma), 1/min(ns)), gen.dim)
 
-  out = list(Gamma.prop = Gamma.prop,
-             Coef.est = Coef.est,
-             Point.vec = Point.vec,
-             SE.vec = SE.vec,
-             L = L,
-             gen.mu = gen.mu,
-             gen.Cov = gen.Cov)
-  structure(out, class = "Maximin")
+  obj = list(Gamma.plugin = Gamma.plugin,
+             Gamma.debias = Gamma.debias,
+             Var.Gamma = Var.Gamma,
+             fits.info = fits.info,
+             Points.info = Points.info)
+  obj
+}
+
+#' Inference method
+#' @description Given the returned list of Maximin, compute the Point estimator and Confidence interval.
+#'
+#' @param obj returned list of Maximin
+#' @param delta The ridge penalty (Default = 0)
+#' @param gen.size The generating sample size (Default = 500)
+#' @param threshold Should generated samples be filtered or not?
+#' if 0, use normal threshold to filter;
+#' if 1, use chi-square threshold to filter;
+#' if 2, do not filter (Default = 0)
+#' @param alpha confidence value to construct confidence interval (Default = 0.05)
+#' @param alpha.thres confidence value to select generated samples (Default = 0.01)
+#'
+#' @return
+#' \item{weight}{The weight vector for groups, of length \eqn{L}}
+#' \item{mm.effect}{The aggregated maximin effect (coefficients), of length \eqn{p} or \eqn{p+1}}
+#' \item{mminfer}{The list of length \eqn{n.loading}, each contains the point estimator and confidence interval}
+#' @export
+#'
+#' @importFrom stats na.omit qchisq qnorm
+#' @importFrom intervals Intervals interval_union
+#' @importFrom MASS mvrnorm
+#' @import CVXR
+Infer <- function(obj, delta=0, gen.size=500, threshold=0, alpha=0.05, alpha.thres=0.01){
+  n.loading = length(obj$Points.info[[1]]$est.debias.vec)
+  L = nrow(obj$Gamma.debias)
+  ## points.mat records each loading each group's debiased point estimator
+  points.mat = do.call(cbind, lapply(obj$Points.info, FUN=function(x) x$est.debias.vec)) # dim of (n.loading, L)
+  ## se.mat records each loading each group's standard error
+  se.mat = do.call(cbind, lapply(obj$Points.info, FUN=function(x) x$se.vec)) # dim of (n.loading, L)
+
+  ####################### Bias-corrected Point Estimation #######################
+  ### solve weights using Gamma.debias ###
+  sol = opt.weight(obj$Gamma.debias, delta, report.reward=FALSE)
+  weight = sol$weight
+
+  ### Point Estimation of <loading, \beta_\delta^*>
+  Point.debias = as.vector(points.mat%*%weight)
+
+  ### Maximin Effect ###
+  Coefs = do.call(cbind, lapply(obj$fits.info, FUN=function(x) x$beta.init)) # (p, L)
+  mm.effect = as.vector(Coefs %*% weight)
+
+  ####################### Sampling #######################
+  gen.mu = obj$Gamma.debias[lower.tri(obj$Gamma.debias, diag=TRUE)]
+  gen.Cov = obj$Var.Gamma
+  gen.samples = gensamples(gen.mu, gen.Cov, gen.size, threshold, alpha.thres)
+  ### weights for each generated sample ###
+  gen.weight.mat = matrix(NA, nrow=gen.size, ncol=L)
+  for(g in 1:gen.size){
+    gen.matrix = matrix(NA, nrow=L, ncol=L)
+    gen.matrix[lower.tri(gen.matrix, diag=TRUE)] = gen.samples[g, ]
+    for(l in 1:L){
+      for(k in l:L){
+        gen.matrix[l, k] = gen.matrix[k, l]
+      }
+    }
+    gen.sol = opt.weight(gen.matrix, delta, report.reward=FALSE)
+    gen.weight.mat[g, ] = gen.sol$weight
+  }
+
+  #################### Construct CI ######################
+  CIs = rep(list(NA), n.loading)
+  for(i.loading in 1:n.loading){
+    points = points.mat[i.loading,]
+    ses = se.mat[i.loading,]
+    point.gen.vec = as.vector(gen.weight.mat %*% points)
+    se.gen.vec = sqrt(as.vector(gen.weight.mat^2 %*% ses^2))
+    CI.ori = cbind(point.gen.vec - qnorm(1-alpha/2)*se.gen.vec,
+                   point.gen.vec + qnorm(1-alpha/2)*se.gen.vec)
+    CI = na.omit(CI.ori)
+    uni = Intervals(CI)
+    CI.union = as.matrix(interval_union(uni))
+    colnames(CI.union) <- c('lower', 'upper')
+    CIs[[i.loading]] = CI.union
+  }
+
+  #################### Output #####################
+  mminfer = rep(list(NA), n.loading)
+  for(i.loading in 1:n.loading){
+    mminfer[[i.loading]] = list(point = Point.debias[i.loading],
+                                CI = CIs[[i.loading]])
+  }
+  out = list(weight = weight,
+             mm.effect = mm.effect,
+             mminfer = mminfer)
+  return(out)
+}
+
+#' measurement of instability
+#' @description compute the instability measurement given a specific ridge penalty
+#'
+#' @param obj The returned list of Maximin
+#' @param delta The ridge penalty (Default = 0)
+#' @param gen.size The generating sample size (Default = 500)
+#' @param threshold Should generated samples be filtered or not?
+#' if 0, use normal threshold to filter;
+#' if 1, use chi-square threshold to filter;
+#' if 2, do not filter. (Default = 0)
+#' @param alpha.thres The confidence value to select generated samples (Default = 0.01)
+#'
+#' @return The measurement of instability
+#' @export
+measure_instability <- function(obj, delta=0, gen.size=500, threshold=0, alpha.thres=0.01){
+  L = nrow(obj$Gamma.debias)
+  gen.dim = L*(L+1)/2
+  gen.mu = obj$Gamma.debias[lower.tri(obj$Gamma.debias, diag=TRUE)]
+  gen.Cov = obj$Var.Gamma
+
+  spnorm.Gamma.diff = rep(0, gen.size)
+  l2norm.gamma.diff = rep(0, gen.size)
+
+  ################################################
+  ###### Compute Gamma.diff and gamma.diff #######
+  ################################################
+  gen.samples = gensamples(gen.mu, gen.Cov, gen.size, threshold, alpha.thres)
+
+  gen.Gamma.array = array(NA, dim=c(gen.size, L, L))
+  gen.weight.mat = matrix(NA, nrow=gen.size, L)
+
+  sol = opt.weight(obj$Gamma.debias, delta, report.reward=FALSE)
+  weight.prop = sol$weight
+
+  for(g in 1:gen.size){
+    gen.matrix = matrix(NA, nrow=L, ncol=L)
+    gen.matrix[lower.tri(gen.matrix, diag=TRUE)] = gen.samples[g,]
+    for(l in 1:L){
+      for(k in l:L){
+        gen.matrix[l, k] = gen.matrix[k, l]
+      }
+    }
+    gen.Gamma.array[g,,] = gen.matrix
+    gen.sol = opt.weight(gen.matrix, delta, report.reward=FALSE)
+    gen.weight.mat[g,] = gen.sol$weight
+  }
+  for(g in 1:gen.size){
+    Gamma.diff = gen.Gamma.array[g,,] - obj$Gamma.debias
+    spnorm.Gamma.diff[g] = sqrt(max((eigen(Gamma.diff)$values)^2))
+    gamma.diff = gen.weight.mat[g,] - weight.prop
+    l2norm.gamma.diff[g] = sqrt(sum(gamma.diff^2))
+  }
+  measure = mean(l2norm.gamma.diff^2 / spnorm.Gamma.diff^2)
+  return(measure)
 }
 
 
+#' Decide ridge penalty data-dependently
+#' @description  To tell if the estimator is stable or not without ridge penalty
+#' at first. If instable, it picks a ridge penalty data-dependently.
+#' @param obj The returned list of Maximin
+#' @param gen.size The generating sample size (Default = 500)
+#' @param step_delta The step size of searching delta (Default = 0.1)
+#' @param MAX_iter Maximum of iterations for searching (Default = 100)
+#' @param verbose Print information about delta and reward (Default = \code{FALSE})
+#'
+#' @return
+#' \item{delta}{The data-dependent ridge penalty}
+#' \item{reward.ratio}{The ratio of penalized reward over non-penalized reward}
+#' @export
+decide_delta <- function(obj, gen.size=500, step_delta=0.1, MAX_iter=100, verbose=FALSE){
+  #######################################
+  ############### STEP-1 ################
+  ## Compute Measure square on delta=0 ##
+  #######################################
+  measure = measure_instability(obj, delta=0, gen.size=gen.size, threshold=0, alpha.thres=0.01)
+  if(measure <=0.5){
+    print(paste("ridge penalty 0 suffices to yield a stable estimator"))
+    out <- list(delta = 0,
+                reward.ratio = 1)
+  }
+  ####################################################
+  ##################### STEP-2 #######################
+  ## If rejected above, pick delta data-dependently ##
+  ####################################################
+  if(measure > 0.5){
 
+    sol0 = opt.weight(obj$Gamma.debias, 0)
+    reward0 = sol0$reward
+
+    delta = 0
+    reward = reward0
+    for(i in 1:MAX_iter){
+      delta_new = delta + step_delta
+      sol = opt.weight(obj$Gamma.debias, delta_new)
+      reward = sol$reward
+      if(reward <= 0.95 * reward0) break
+      delta = delta_new
+      if(delta > 2){
+        cat("The picked delta reaches the maximum limit 2.\n")
+        break
+      }
+    }
+
+    sol = opt.weight(obj$Gamma.debias, delta)
+    reward = sol$reward
+    if(verbose){
+      print(paste0("The picked delta is ", round(delta,4)))
+      print(paste0("Reward Ratio is ", round(reward / reward0, 4)))
+    }
+    out <- list(delta = delta,
+                reward.ratio = reward/reward0)
+  }
+
+  return(out)
+}
