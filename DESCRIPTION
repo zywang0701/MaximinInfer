@@ -1,6 +1,6 @@
 Package: MaximinInfer
 Type: Package
-Title: Inference for Maximin Effects in High-dimensional Settings
+Title: Inference for Maximin Effects in High-Dimensional Settings
 Version: 2.0.0
 Author: Zhenyu Wang; Zijian Guo
 Maintainer: Zhenyu Wang <zw425@stat.rutgers.edu>
